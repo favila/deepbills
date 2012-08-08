@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" xml:lang="en" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n">
+<head>
+<meta charset="utf-8" />
+<title>${page_title}: ${site_name}</title>
+<link rel="stylesheet" href="/static/css/layout.css" type="text/css" media="screen" />
+<!--[if lt IE 9]>
+<link rel="stylesheet" href="/static/css/ie.css" type="text/css" media="screen" />
+<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->
+<script src="/static/js/jquery-1.5.2.min.js"></script>
+<script src="/static/js/hideshow.js"></script>
+<script src="/static/js/jquery.tablesorter.min.js"></script>
+<script src="/static/js/jquery.equalHeight.js"></script>
+<script>
+$(document).ready(function() { 
+	$(".tablesorter").tablesorter();
+});
+$(document).ready(function() {
+	$(".tab_content").hide(); //Hide all content
+	$("ul.tabs li:first").addClass("active").show(); //Activate first tab
+	$(".tab_content:first").show(); //Show first tab content
+
+	//On Click Event
+	$("ul.tabs li").click(function() {
+
+		$("ul.tabs li").removeClass("active"); //Remove any "active" class
+		$(this).addClass("active"); //Add "active" class to selected tab
+		$(".tab_content").hide(); //Hide all tab content
+
+		var activeTab = $(this).find("a").attr("href"); //Find the href attribute value to identify the active tab + content
+		$(activeTab).fadeIn(); //Fade in the active ID content
+		return false;
+	});
+});
+$(function(){$('.column').equalHeight();});
+</script>
+</head>
+<body>
+	<header id="header">
+		<hgroup>
+			<h1 class="site_title">${site_name}</h1>
+			<h2 class="section_title">${page_title}</h2>
+		</hgroup>
+	</header> <!-- end of header bar -->
+	
+	<section id="secondary_bar">
+		<div class="user">
+			<p>User Name</p>
+			<a class="logout_user">Logout</a>
+		</div>
+		<div class="breadcrumbs_container">
+			<article class="breadcrumbs">
+				<a href="/">Dashboard</a>
+				<div class="breadcrumb_divider"></div>
+				<a class="current">Revise ${bill['name']}</a>
+			</article>
+		</div>
+	</section><!-- end of secondary bar -->
+	
+	<aside id="sidebar" class="column">
+		<form class="quick_search">
+			<input disabled type="text" value="Quick Search" onfocus="if(!this._haschanged){this.value=''};this._haschanged=true;">
+		</form>
+		<hr/>
+		<h3>Queries</h3>
+		<ul class="toggle">
+			<li class="icn_folder"><a href="/query">Query Panel</a></li>
+		<h3>Bills</h3>
+		<ul class="toggle">
+			<li class="icn_new_article"><a href="/activity">View Activity</a></li>
+		</ul>
+		<h3>Users</h3>
+		<ul class="toggle disabled">
+			<li class="icn_view_users"><a href="/users">View Users</a></li>
+			<li class="icn_add_user"><a href="/users?create">Add New User</a></li>
+			<li class="icn_profile"><a href="/users/favila">Your Profile</a></li>
+		</ul>
+		
+	</aside><!-- end of sidebar -->
+	
+	<section id="main" class="column">
+		<h4 tal:condition="error" class="alert_error">${error}</h4>
+		<article class="module width_full">
+			<form method="POST" tal:attributes="action '/bills/'+bill['name']+'/edit'">
+			<header><h3>Edit Bill: ${bill['name']}</h3></header>
+			<div class="module_content">
+				<fieldset>
+					<label>Description</label>
+					<input type="text" name="description" tal:attributes="value bill['description']" />
+				</fieldset>
+				<fieldset>
+					<label>XML</label>
+					<textarea name="text" rows="40">${bill['text']}</textarea>
+				</fieldset>
+				<div class="clear"></div>
+			</div>
+			<footer>
+				<div class="submit_link">
+					<input type="submit" class="alt_btn" value="Submit" />
+				</div>
+			</footer>
+			</form>
+		</article>
+		<div class="clear"></div>
+	</section>
+
+
+</body>
+
+</html>
