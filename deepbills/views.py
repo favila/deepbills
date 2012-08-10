@@ -5,8 +5,6 @@ from pyramid.response import Response
 from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther
 from pyramid.url import route_url
 
-from lxml import etree, objectify
-
 import datetime
 
 import models.BaseXClient2 as BaseXClient
@@ -39,7 +37,7 @@ def query(request):
     response['result'] = "\n".join(response['result'])
     return response
 
-@view_config(route_name='dashboard', renderer="templates/dashboard.pt")
+@view_config(route_name='dashboard', renderer="templates/dashboard.pt", http_cache=3600)
 def dashboard(request):
     response = {
         'page_title': 'Dashboard',
@@ -47,7 +45,7 @@ def dashboard(request):
         'rows':[],
     }
     query = """
-    for $id in collection('deepbills/docmetas')[position() = 1 to 10]/docmeta/@id
+    for $id in collection('deepbills/docmetas')/docmeta/@id
     let $i := xs:string($id)
     return <tr>
         <td>{$i}</td>
@@ -106,7 +104,7 @@ def bill_view(request):
 
 
 @view_config(route_name="bill_edit", renderer="templates/bill_edit.pt")
-def bill_edit_get(request):
+def bill_edit(request):
     docid = request.matchdict['docid']
     response = {
         'page_title': 'Edit Bill {}'.format(docid),
@@ -128,7 +126,7 @@ def bill_edit_get(request):
     
     qupdate = ("""
         declare variable $docmeta := collection('deepbills/docmetas')/docmeta[@id=$docid];
-        declare variable $newrev := $docmeta/revisions/revision[last()]/position()+1;
+        declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
         declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
         insert nodes 
             <revision id="{$newrev}" commit-time="{$commit-time}" comitter="{$comitter}" doc="{concat('/', $newdocpath)}">
