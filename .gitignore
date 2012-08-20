@@ -1,0 +1,5 @@
+env/*
+*.tmproj
+.*.swp
+*.py[co]
+*.egg-info
