@@ -11,7 +11,7 @@ import models.BaseXClient2 as BaseXClient
 
 def sessionfactory():
     session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
-    session.execute('OPEN deepbills')
+    session.defaultDB = 'deepbills';
     return session
 
 @view_config(route_name='query', renderer='templates/query.pt')
@@ -45,21 +45,20 @@ def dashboard(request):
         'rows':[],
     }
     query = """
-    for $id in collection('deepbills/docmetas')/docmeta/@id
+    for $id in db:open($DB, 'docmetas')/docmeta/@id[matches(., '^[0-9]+hr[0-9]')]
     let $i := xs:string($id)
     return <tr>
         <td>{$i}</td>
         <td><a href="/bills/{$i}/activity">activity</a></td>
         <td><a href="/bills/{$i}/view">view</a></td>
         <td><a href="/bills/{$i}/edit">edit</a></td>
+        <td><a href="/static/Editor/Index.html?doc={$i}">edit (AKN)</a></td>
         <td><a href="/bills/{$i}/compare">compare</a></td>
     </tr>"""
     with sessionfactory() as session:
         with session.query(query) as qr:
-            for typecode, item in qr.iter():
-                response['rows'].append(item)
+            response['rows'] = qr.execute()
 
-    response['rows'] = "\n".join(response['rows'])
     return response
 
 
@@ -74,8 +73,8 @@ def bill_view(request):
     }
     
     qrevision = ("""
-        declare variable $latestrevision := collection('deepbills/docmetas')/docmeta[@id=$docid]/revisions/revision[last()];
-        declare variable $latestdoc := doc(concat('deepbills', $latestrevision/@doc));
+        declare variable $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()];
+        declare variable $latestdoc := db:open($DB, $latestrevision/@doc);
         (
             string($latestrevision/../../@id),
             string($latestrevision/@id),
@@ -120,12 +119,12 @@ def bill_edit(request):
     
     
     qget = ("""
-    declare variable $latestrevision := collection('deepbills/docmetas')/docmeta[@id=$docid]/revisions/revision[last()];
-    doc(concat('deepbills', $latestrevision/@doc))
+    declare variable $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta[@id=$docid]/revisions/revision[last()];
+    db:open($DB, $latestrevision/@doc)
     """, ['docid'])
     
     qupdate = ("""
-        declare variable $docmeta := collection('deepbills/docmetas')/docmeta[@id=$docid];
+        declare variable $docmeta := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta;
         declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
         declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
         insert nodes 
@@ -133,7 +132,7 @@ def bill_edit(request):
                 <description>{$description}</description>
             </revision>
         as last into $docmeta/revisions,
-        db:add('deepbills', $text, $newdocpath)
+        db:add($DB, $text, $newdocpath)
     
     """, 'docid commit-time comitter description text'.split())
     
