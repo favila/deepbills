@@ -2,7 +2,7 @@ from pyramid.view import view_config
 
 from pyramid.view import view_config
 from pyramid.response import Response
-from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther
+from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther, HTTPBadRequest
 from pyramid.url import route_url
 
 import datetime
@@ -13,6 +13,24 @@ def sessionfactory():
     session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
     session.defaultDB = 'deepbills';
     return session
+
+@view_config(route_name='bill_resource', renderer='string')
+def bill_resource(request):
+    docid = request.matchdict['docid']
+    qlatest = ("""
+    let $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()]
+    return db:open($DB, $latestrevision/@doc)/*
+    """, ['docid'])
+    with sessionfactory() as session:
+        with session.query(*qlatest) as qr:
+            qr.bind('docid', docid)
+            try:
+                responsexml = qr.execute()
+            except IOError:
+                return HTTPBadRequest()
+    return Response(responsexml, content_type="application/xml")
+
+
 
 @view_config(route_name='query', renderer='templates/query.pt')
 def query(request):
@@ -42,7 +60,7 @@ def dashboard(request):
     response = {
         'page_title': 'Dashboard',
         'site_name': 'DeepBills',
-        'rows':[],
+        'rows':'',
     }
     query = """
     for $id in db:open($DB, 'docmetas')/docmeta/@id[matches(., '^[0-9]+hr[0-9]')]

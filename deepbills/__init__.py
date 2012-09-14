@@ -9,6 +9,7 @@ def main(global_config, **settings):
     config.add_route('query', '/query')
     config.add_route('bill_view', '/bills/{docid}/view')
     config.add_route('bill_edit', '/bills/{docid}/edit')
+    config.add_route('bill_resource', '/bills/{docid}')
     
     config.scan()
     return config.make_wsgi_app()
