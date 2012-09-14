@@ -4,7 +4,6 @@ MarkupSafe==0.15
 PasteDeploy==1.5.0
 Pygments==1.5
 WebOb==1.2.1
--e git+https://github.com/favila/deepbills.git@594725eccdcb29aaa31b230a75e8d6596327f2a2#egg=deepbills-dev
 pyramid==1.3.2
 pyramid-debugtoolbar==1.0.2
 repoze.lru==0.6
@@ -14,3 +13,5 @@ waitress==0.8.1
 wsgiref==0.1.2
 zope.deprecation==4.0.0
 zope.interface==4.0.1
+#not sure if we should be listing ourselves as a requirement
+# -e git+https://github.com/favila/deepbills.git#egg=deepbills-dev
