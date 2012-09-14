@@ -30,12 +30,12 @@ def deploy_deepbills():
 	run('if [ ! -d deepbills ]; then git clone %(gitrepo)s; fi' % env)
 	with cd('deepbills'):
 		run('git fetch')
-		run('source ../env/bin/activate && pip install -r requirements.txt')
+		run('source ../env/bin/activate && pip install -r requirements.txt && python setup.py develop')
 
 def deploy_editor():
 	#rsync editor files, make symlink
 	local('rsync -ar --cvs-exclude ../AKN/Editor %(user)s@%(host)s:' % env)
-	run('if [ ! -a deepbills/deepbills/static/Editor ]; then cd deepbills/deepbills/static; '
+	run('if [ ! -h deepbills/deepbills/static/Editor ]; then cd deepbills/deepbills/static; '
 		' ln -s ../../../Editor; fi')
 
 def restart_servers():
