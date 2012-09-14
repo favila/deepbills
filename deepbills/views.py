@@ -119,7 +119,7 @@ def bill_edit(request):
     
     
     qget = ("""
-    declare variable $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta[@id=$docid]/revisions/revision[last()];
+    declare variable $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()];
     db:open($DB, $latestrevision/@doc)
     """, ['docid'])
     
