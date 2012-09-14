@@ -1,4 +1,5 @@
 Chameleon==2.9.2
+Fabric==1.4.3
 Mako==0.7.2
 MarkupSafe==0.15
 PasteDeploy==1.5.0
