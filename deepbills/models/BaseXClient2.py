@@ -19,6 +19,9 @@ class Session(BaseXClient.Session):
     
     def query(self, querytxt, boundnames=None):
         """Return a Query with the necessary preambles for the boundnames"""
+        db = ['DB']
+        if getattr(self, 'defaultDB', None) is not None:
+            boundnames = boundnames+db if boundnames is not None else db
         if boundnames is not None:
             querytxt = declare_external(boundnames)+"\n"+querytxt
         return Query(self, querytxt, boundnames)
@@ -27,7 +30,11 @@ class Query(BaseXClient.Query):
     def __init__(self, session, querytxt, binds=None):
         BaseXClient.Query.__init__(self, session, querytxt)
         self.__bindnames = binds
-        
+        defaultDB = getattr(session, 'defaultDB', None)
+        if defaultDB is not None:
+            self.bind('DB', defaultDB)
+
+
     def execute(self, binds=None):
         """Execute the query with binds and return the result"""
         if binds is not None:
