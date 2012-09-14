@@ -99,6 +99,7 @@ $(function(){$('.column').equalHeight();});
 					</dd>
 					<div class="submit_link">
 						<a tal:attributes="href '/bills/'+bill['name']+'/edit'">Edit Bill</a>
+						<a tal:attributes="href '/static/Editor/Index.html?doc='+bill['name']">Edit Bill (AKN)</a>
 					</div>
 				</fieldset>
 				<fieldset>
