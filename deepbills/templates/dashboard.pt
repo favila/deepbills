@@ -88,7 +88,7 @@ $(function(){$('.column').equalHeight();});
 			<thead> 
 				<tr> 
     				<th>Bill Name</th> 
-    				<th colspan="4">Actions</th> 
+    				<th colspan="5">Actions</th> 
 				</tr> 
 			</thead> 
 			<tbody tal:content="structure rows"/>
