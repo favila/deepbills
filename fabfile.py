@@ -29,7 +29,7 @@ def deploy_deepbills():
 	# upload requirements.txt and install everything
 	run('if [ ! -d deepbills ]; then git clone %(gitrepo)s; fi' % env)
 	with cd('deepbills'):
-		run('git fetch')
+		run('git pull')
 		run('source ../env/bin/activate && pip install -r requirements.txt && python setup.py develop')
 
 def deploy_editor():
