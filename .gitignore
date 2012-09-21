@@ -3,3 +3,4 @@ env/*
 .*.swp
 *.py[co]
 *.egg-info
+deepbills/static/Editor
