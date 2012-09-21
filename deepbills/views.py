@@ -1,3 +1,4 @@
+# coding: utf-8
 from pyramid.view import view_config
 
 from pyramid.view import view_config
@@ -14,7 +15,7 @@ def sessionfactory():
     session.defaultDB = 'deepbills';
     return session
 
-@view_config(route_name='bill_resource', renderer='string')
+@view_config(route_name='bill_resource', renderer='string', request_method="GET")
 def bill_resource(request):
     docid = request.matchdict['docid']
     qlatest = ("""
@@ -30,6 +31,45 @@ def bill_resource(request):
                 return HTTPBadRequest()
     return Response(responsexml, content_type="application/xml")
 
+@view_config(route_name='bill_resource', renderer='json', request_method="PUT")
+def save_bill_resource(request):
+    docid = request.matchdict['docid']
+    response = {}
+    newbill = {
+        'commit-time': datetime.datetime.now().isoformat(),
+        'comitter' : '/users/favila.xml',
+        'description': 'Edited via AKN',
+        'text': request.body.decode('utf-8'),
+    }
+    qupdate = ("""
+        declare variable $docmeta := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta;
+        declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
+        declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
+        insert nodes 
+            <revision id="{$newrev}" commit-time="{$commit-time}" comitter="{$comitter}" doc="{concat('/', $newdocpath)}">
+                <description>{$description}</description>
+            </revision>
+        as last into $docmeta/revisions,
+        db:add($DB, $text, $newdocpath)
+    
+    """, 'docid commit-time comitter description text'.split())
+
+    if not newbill['description'] or not newbill['text']:
+        response['error'] = 'Description and text are required'
+        return response
+
+    with sessionfactory() as session:
+        try:
+            with session.query(*qupdate) as q:
+                q.bind('docid', docid)
+                q.bind('commit-time', newbill['commit-time'])
+                q.bind('comitter', newbill['comitter'])
+                q.bind('description', newbill['description'])
+                q.bind('text', newbill['text'])
+                q.execute()
+        except IOError, e:
+            response['error'] = e.message
+    return response
 
 
 @view_config(route_name='query', renderer='templates/query.pt')
