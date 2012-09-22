@@ -10,7 +10,10 @@ import models.BaseXClient2 as BaseXClient
 
 def sessionfactory():
     session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
-    session.defaultDB = 'deepbills';
+    defaultbindings = {
+        'DB': 'deepbills'
+    }
+    session.execute('SET BINDINGS '+ BaseXClient.escapebindings(defaultbindings))
     return session
 
 @view_config(route_name='bill_resource', renderer='string', request_method="GET")
