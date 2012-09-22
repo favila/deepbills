@@ -1,7 +1,5 @@
 # coding: utf-8
 from pyramid.view import view_config
-
-from pyramid.view import view_config
 from pyramid.response import Response
 from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther, HTTPBadRequest
 from pyramid.url import route_url
