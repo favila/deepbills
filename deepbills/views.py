@@ -8,6 +8,8 @@ import datetime
 
 import models.BaseXClient2 as BaseXClient
 
+from xml.etree import cElementTree as ET
+
 def sessionfactory():
     session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
     defaultbindings = {
@@ -72,6 +74,41 @@ def save_bill_resource(request):
             response['error'] = e.message
     return response
 
+
+@view_config(route_name='vocabulary_lookup', renderer='json')
+def vocabulary_lookup(request):
+    vocab = 'vocabularies/%s.xml' % request.matchdict['vocabid']
+    query = request.GET.get('q')
+
+    xquery = ("""
+        import module namespace functx = "http://www.functx.com";
+        declare variable $vocab as xs:string external;
+        declare variable $query as xs:string external;
+        <results vocabulary="{$vocab}" query="{$query}">
+        {
+            for $match in functx:distinct-nodes(
+                db:open($DB, $vocab)/*/federal-entity[
+                    */text() contains text {$query} using fuzzy
+                ]
+            )
+            return <e
+                id="{$match/@id}"
+                name="{($match/name[@current="true" or position()=1]
+                    | $match/abbr[1])[1]}"
+            />
+        }
+        </results>
+    """, [])
+
+    with sessionfactory() as session:
+        with session.query(*xquery) as q:
+            q.bind('vocab', vocab)
+            q.bind('query', query)
+            xresults = ET.fromstring(q.execute())
+
+    aresults = [e.attrib for e in xresults.iter('e')]
+
+    return aresults
 
 @view_config(route_name='query', renderer='templates/query.pt')
 def query(request):

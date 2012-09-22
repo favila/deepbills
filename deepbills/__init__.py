@@ -24,6 +24,9 @@ from pyramid.config import Configurator
 
 # /users/{userid}
 
+# /vocabularies/{vocab} ?q=""
+# /vocabularies/{vocab}/{vocabid}
+
 
 
 def main(global_config, **settings):
@@ -36,6 +39,7 @@ def main(global_config, **settings):
     config.add_route('bill_view', '/bills/{docid}/view')
     config.add_route('bill_edit', '/bills/{docid}/edit')
     config.add_route('bill_resource', '/bills/{docid}')
-    
+    config.add_route('vocabulary_lookup', '/vocabularies/{vocabid}')
+
     config.scan()
     return config.make_wsgi_app()
