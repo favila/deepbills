@@ -19,9 +19,6 @@ class Session(BaseXClient.Session):
     
     def query(self, querytxt, boundnames=None):
         """Return a Query with the necessary preambles for the boundnames"""
-        db = ['DB']
-        if getattr(self, 'defaultDB', None) is not None:
-            boundnames = boundnames+db if boundnames is not None else db
         if boundnames is not None:
             querytxt = declare_external(boundnames)+"\n"+querytxt
         return Query(self, querytxt, boundnames)
@@ -30,10 +27,6 @@ class Query(BaseXClient.Query):
     def __init__(self, session, querytxt, binds=None):
         BaseXClient.Query.__init__(self, session, querytxt)
         self.__bindnames = binds
-        defaultDB = getattr(session, 'defaultDB', None)
-        if defaultDB is not None:
-            self.bind('DB', defaultDB)
-
 
     def execute(self, binds=None):
         """Execute the query with binds and return the result"""
@@ -54,4 +47,39 @@ def declare_external(bindnames):
     dec_tmpl = "declare variable ${} external;"
     declarations = [dec_tmpl.format(name) for name in bindnames]
     return '\n'.join(declarations)
+
+def escapebindings(D):
+    """Return a string escaped for the SET BINDINGS BaseX command for a mapping
+
+    D should be a mapping, such as a dict with the following structure:
+
+    >>> d = {
+        ('namespaceURI', 'varname') : 'value', # for a namespaced variable name
+        'varname' : 'value', # for a variable name in no namespace
+        }
+
+    """
+    return ','.join(escapebinding(k, v) for k,v in D.items())
+
+def escapebinding(name, value):
+    """Return a string escaped for SET BINDINGS BaseX Command for a name, value pair
+
+    -- name may be a tuple of ('namespaceURI', 'name')
+    -- value is a string
+
+    """
+    if isinstance(name, basestring):
+        name = ('', name)
+    namespace, localname = name
+    if namespace:
+        binding = "{%s}%s=%s" % (namespace, localname, value.replace(',',',,'))
+    else:
+        binding = "$%s=%s" % (localname, value.replace(',',',,'))
+    return binding
+
+
+
+
+
+
     
