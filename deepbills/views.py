@@ -87,8 +87,8 @@ def vocabulary_lookup(request):
         <results vocabulary="{$vocab}" query="{$query}">
         {
             for $match in functx:distinct-nodes(
-                db:open($DB, $vocab)/*/federal-entity[
-                    */text() contains text {$query} using fuzzy
+                db:open($DB, $vocab)/*/*[
+                    */text() contains text {$query} using stemming using language "en" using fuzzy
                 ]
             )
             return <e
