@@ -45,6 +45,7 @@ def save_bill_resource(request):
         'text': request.body.decode('utf-8'),
     }
     qupdate = ("""
+        declare option db:chop "false";
         declare variable $docmeta := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta;
         declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
         declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
@@ -220,6 +221,7 @@ def bill_edit(request):
     """, ['docid'])
     
     qupdate = ("""
+        declare option db:chop "false";
         declare variable $docmeta := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta;
         declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
         declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
