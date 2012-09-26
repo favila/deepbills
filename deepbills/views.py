@@ -76,7 +76,7 @@ def save_bill_resource(request):
     return response
 
 
-@view_config(route_name='vocabulary_lookup', renderer='json')
+@view_config(route_name='vocabulary_lookup', renderer='json', http_cache=3600)
 def vocabulary_lookup(request):
     vocab = 'vocabularies/%s.xml' % request.matchdict['vocabid']
     query = request.GET.get('q')
