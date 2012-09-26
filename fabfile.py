@@ -19,7 +19,7 @@ def deploy():
 	restart_servers()
 	
 def push_deepbills():
-	local('git push origin')
+	local('git push beanstalk')
 
 def deploy_virtualenv():
 	#set up the virtualenv
