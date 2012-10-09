@@ -741,7 +741,7 @@ height: 20px;
 color: #666666;
 }
 
-fieldset textarea {
+fieldset textarea, fieldset pre {
 -webkit-border-radius: 5px;
 -moz-border-radius: 5px;
 border-radius: 5px;
@@ -757,6 +757,11 @@ display: block;
 float: left;
 width: 96%;
 margin: 0 10px;
+}
+
+fieldset pre {
+	overflow: auto;
+	width: 810px;
 }
 
 fieldset textarea:focus {
