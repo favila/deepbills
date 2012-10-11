@@ -34,9 +34,9 @@ def deploy_deepbills():
 
 def deploy_editor():
 	#rsync editor files, make symlink
-	local('rsync -ar --cvs-exclude ../AKN/Editor %(user)s@%(host)s:' % env)
-	run('if [ ! -h deepbills/deepbills/static/Editor ]; then cd deepbills/deepbills/static; '
-		' ln -s ../../../Editor; fi')
+	local('rsync -ar --cvs-exclude ../AKN %(user)s@%(host)s:' % env)
+	run('if [ ! -h deepbills/deepbills/static/AKN ]; then cd deepbills/deepbills/static; '
+		' ln -s ../../../AKN; fi')
 
 def restart_servers():
 	with settings(warn_only=True):
