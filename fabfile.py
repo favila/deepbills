@@ -5,7 +5,7 @@ from fabric.api import *
 env.hosts = ['deepbills.dancingmammoth.com']
 env.user = 'favila'
 env.gitrepo = 'https://github.com/favila/deepbills.git'
-env.editordir = '../AKN'
+env.editordir = '../AKN/Editor'
 
 
 def push_and_deploy():
@@ -36,7 +36,7 @@ def deploy_deepbills():
 def deploy_editor():
 	#rsync editor files, make symlink
 	#Only copy HouseXML, Editor, BCN, AkomaNtoso
-	local("rsync -arz -e 'ssh -c arcfour' --cvs-exclude --exclude='.*' --exclude='.git/' --include='/*' --include='/*/HouseXML/***' --include='/*/Editor/***' --include='/*/BCN/***' --include='/*/AkomaNtoso/***' --exclude='*' %(editordir)s -- %(user)s@%(host)s:" % env)
+	local("rsync -arz -e 'ssh -c arcfour' --exclude='.*' --exclude='.git/' %(editordir)s -- %(user)s@%(host)s:" % env)
 
 def restart_servers():
 	with settings(warn_only=True):
