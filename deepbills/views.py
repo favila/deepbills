@@ -149,7 +149,7 @@ def dashboard(request):
         <td><a href="/bills/{$i}/activity">activity</a></td>
         <td><a href="/bills/{$i}/view">view</a></td>
         <td><a href="/bills/{$i}/edit">edit</a></td>
-        <td><a href="/Editor/Index.html?pkgs=HouseXML&amp;doc={$i}">edit (AKN)</a></td>
+        <td><a href="/Editor/Index.html?doc={$i}">edit (AKN)</a></td>
         <td><a href="/bills/{$i}/compare">compare</a></td>
     </tr>"""
     with sessionfactory() as session:
