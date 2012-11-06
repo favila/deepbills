@@ -111,6 +111,55 @@ def vocabulary_lookup(request):
 
     return aresults
 
+
+@view_config(route_name="entity_lookup", renderer="json")
+def entity_lookup(request):
+    vocab = 'vocabularies/%s.xml' % request.matchdict['vocabid']
+    entityid = request.matchdict['entityid']
+    xquery = ("""
+        declare variable $vocab as xs:string external;
+        declare variable $entityid as xs:string external;
+        declare function local:extract-entity-name-id-attr($entity as element()*) as node()* {
+            if ($entity) then 
+                (attribute {"id"} { $entity/@id },
+                attribute {"name"} {
+                    ($entity/name[@current="true" or position()=1]
+                    | $entity/abbr[1])[1]
+                })
+            else ()
+        };
+        let $entity := db:open($DB, $vocab)/*/*[@id eq $entityid],
+            $parentid := xs:string($entity/@parent-fed-id)
+        return 
+            if ($entity) then 
+                <e>{local:extract-entity-name-id-attr($entity)}
+                   <parent>{local:extract-entity-name-id-attr($entity/../*[@id eq $parentid])}</parent>
+                </e>
+            else <e/>
+        """,[])
+    with sessionfactory() as session:
+        with session.query(*xquery) as q:
+            q.bind('vocab', vocab)
+            q.bind('entityid', entityid)
+            res = q.execute()
+            xresults = ET.fromstring(res)
+    response = xml_to_map(xresults)
+    if not response:
+        raise HTTPNotFound
+    return response
+
+
+def xml_to_map(root):
+    mapping = {}
+    for aname, aval in root.attrib.iteritems():
+        mapping[aname] = aval
+    for child in root:
+        mapping[child.tag] = xml_to_map(child)
+    if not mapping:
+        return None
+    return mapping
+
+
 @view_config(route_name='query', renderer='templates/query.pt')
 def query(request):
     response = {
