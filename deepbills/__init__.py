@@ -39,6 +39,7 @@ def main(global_config, **settings):
     config.add_route('bill_edit', '/bills/{docid}/edit')
     config.add_route('bill_resource', '/bills/{docid}')
     config.add_route('vocabulary_lookup', '/vocabularies/{vocabid}')
+    config.add_route('entity_lookup', '/vocabularies/{vocabid}/{entityid}')
 
 
     config.add_static_view('Editor', 'static/AKN/Editor')
