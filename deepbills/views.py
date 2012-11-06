@@ -1,7 +1,7 @@
 # coding: utf-8
 from pyramid.view import view_config
 from pyramid.response import Response
-from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther, HTTPBadRequest
+from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther, HTTPBadRequest, HTTPNotFound
 from pyramid.url import route_url
 
 import datetime
@@ -170,8 +170,10 @@ def bill_view(request):
     }
     
     qrevision = ("""
-        declare variable $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()];
-        declare variable $latestdoc := db:open($DB, $latestrevision/@doc);
+        let $docuri := 'docmetas/' || $docid || '.xml'
+        for $latestrevision in db:open($DB, $docuri)/docmeta/revisions/revision[last()]
+        let $latestdoc := db:open($DB, $latestrevision/@doc)
+        return 
         (
             string($latestrevision/../../@id),
             string($latestrevision/@id),
@@ -186,6 +188,8 @@ def bill_view(request):
             with session.query(*qrevision) as qr:
                 qr.bind('docid', docid)
                 qresponse = [v for t,v in qr.iter()]
+                if not qresponse:
+                    raise HTTPNotFound
                 response['bill']['name'] = qresponse[0]
                 response['bill']['revision'] = qresponse[1]
                 response['bill']['metadata']['commit-time'] = qresponse[2]
