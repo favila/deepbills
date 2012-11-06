@@ -37,3 +37,50 @@ class QueryTests(unittest.TestCase):
         self.assertEqual(specialchardoc, result)
 
 
+class ViewTests(unittest.TestCase):
+
+    def setUp(self):
+        self.config = testing.setUp()
+
+    def tearDown(self):
+        testing.tearDown()
+
+    def test_entity_lookup_success_parent(self):
+        from .views import entity_lookup
+        request = testing.DummyRequest()
+        request.matchdict['vocabid'] = 'federal-entities'
+        request.matchdict['entityid'] = '200-35'
+        response = entity_lookup(request)
+        expected = {
+            'id':'200-35',
+            'name':'the Mildred and Claude Pepper Foundation',
+            'parent':{
+                'id':'200',
+                'name':'Other Defense Civil Programs',
+            }
+        }
+        self.assertEqual(response, expected)
+
+
+    def test_entity_lookup_success_noparent(self):
+        from .views import entity_lookup
+        request = testing.DummyRequest()
+        request.matchdict['vocabid'] = 'federal-entities'
+        request.matchdict['entityid'] = '200'
+        response = entity_lookup(request)
+        expected = {
+            'id':'200',
+            'name':'Other Defense Civil Programs',
+            'parent': None
+        }
+        self.assertEqual(response, expected)
+
+    def test_entity_lookup_fail(self):
+        from .views import entity_lookup
+        request = testing.DummyRequest()
+        request.matchdict['vocabid'] = 'federal-entity'
+        request.matchdict['entityid'] = 'zzzzz'
+        with self.assertRaises(HTTPNotFound):
+            response = entity_lookup(request)
+
+
