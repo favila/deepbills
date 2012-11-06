@@ -85,18 +85,26 @@ def vocabulary_lookup(request):
         import module namespace functx = "http://www.functx.com";
         declare variable $vocab as xs:string external;
         declare variable $query as xs:string external;
+        declare function local:extract-entity-name-id-attr($entity as element()*) as node()* {
+            if ($entity) then 
+                (attribute {"id"} { $entity/@id },
+                attribute {"name"} {
+                    ($entity/name[@current="true" or position()=1]
+                    | $entity/abbr[1])[1]
+                })
+            else ()
+        };
         <results vocabulary="{$vocab}" query="{$query}">
         {
-            for $match in functx:distinct-nodes(
+            for $entity in functx:distinct-nodes(
                 db:open($DB, $vocab)/*/*[
                     */text() contains text {$query} using stemming using language "en" using fuzzy
                 ]
             )
-            return <e
-                id="{$match/@id}"
-                name="{($match/name[@current="true" or position()=1]
-                    | $match/abbr[1])[1]}"
-            />
+            let $parentid := xs:string($entity/@parent-fed-id)
+            return <e>{local:extract-entity-name-id-attr($entity)}
+                   <parent>{local:extract-entity-name-id-attr($entity/../*[@id eq $parentid])}</parent>
+                </e>
         }
         </results>
     """, [])
@@ -107,7 +115,7 @@ def vocabulary_lookup(request):
             q.bind('query', query)
             xresults = ET.fromstring(q.execute())
 
-    aresults = [e.attrib for e in xresults.iter('e')]
+    aresults = [xml_to_map(e) for e in xresults.iter('e')]
 
     return aresults
 
