@@ -112,7 +112,7 @@ def vocabulary_lookup(request):
     return aresults
 
 
-@view_config(route_name="entity_lookup", renderer="json")
+@view_config(route_name="entity_lookup", renderer="json", http_cache=3600)
 def entity_lookup(request):
     vocab = 'vocabularies/%s.xml' % request.matchdict['vocabid']
     entityid = request.matchdict['entityid']
