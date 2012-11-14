@@ -101,7 +101,7 @@ def vocabulary_lookup(request):
                     */text() contains text {$query} using stemming using language "en" using fuzzy
                 ]
             )
-            let $parentid := xs:string($entity/@parent-fed-id)
+            let $parentid := xs:string($entity/@parent-id)
             return <e>{local:extract-entity-name-id-attr($entity)}
                    <parent>{local:extract-entity-name-id-attr($entity/../*[@id eq $parentid])}</parent>
                 </e>
@@ -137,7 +137,7 @@ def entity_lookup(request):
             else ()
         };
         let $entity := db:open($DB, $vocab)/*/*[@id eq $entityid],
-            $parentid := xs:string($entity/@parent-fed-id)
+            $parentid := xs:string($entity/@parent-id)
         return 
             if ($entity) then 
                 <e>{local:extract-entity-name-id-attr($entity)}
