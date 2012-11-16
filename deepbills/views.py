@@ -113,7 +113,9 @@ def vocabulary_lookup(request):
         with session.query(*xquery) as q:
             q.bind('vocab', vocab)
             q.bind('query', query)
-            xresults = ET.fromstring(q.execute())
+            #ET.fromstring requires utf-8 string, not unicode
+            element = q.execute().encode('utf-8')
+            xresults = ET.fromstring(element)
 
     aresults = [xml_to_map(e) for e in xresults.iter('e')]
 
