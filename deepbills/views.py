@@ -4,6 +4,8 @@ from pyramid.response import Response
 from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther, HTTPBadRequest, HTTPNotFound
 from pyramid.url import route_url
 
+from codecs import BOM_UTF8
+
 import datetime
 
 import models.BaseXClient2 as BaseXClient
@@ -32,7 +34,7 @@ def bill_resource(request):
                 responsexml = qr.execute()
             except IOError:
                 return HTTPBadRequest()
-    return Response(responsexml, content_type="application/xml")
+    return Response(BOM_UTF8+responsexml, content_type="application/xml")
 
 @view_config(route_name='bill_resource', renderer='json', request_method="PUT")
 def save_bill_resource(request):
@@ -79,8 +81,15 @@ def save_bill_resource(request):
 @view_config(route_name='vocabulary_lookup', renderer='json', http_cache=3600)
 def vocabulary_lookup(request):
     vocab = 'vocabularies/%s.xml' % request.matchdict['vocabid']
-    query = request.GET.get('q')
+    if not request.query_string:
+        with sessionfactory() as session:
+            with session.query("declare variable $vocab as xs:string external; db:open($DB, $vocab)") as q:
+                q.bind('vocab', vocab)
+                responsexml = q.execute().encode('utf-8')
+        return Response(responsexml, content_type="application/xml; charset=utf-8")
 
+
+    query = request.GET.get('q')
     xquery = ("""
         import module namespace functx = "http://www.functx.com";
         declare variable $vocab as xs:string external;
