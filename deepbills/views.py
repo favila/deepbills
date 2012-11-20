@@ -34,7 +34,7 @@ def bill_resource(request):
                 responsexml = qr.execute()
             except IOError:
                 return HTTPBadRequest()
-    return Response(BOM_UTF8+responsexml, content_type="application/xml")
+    return Response(BOM_UTF8+responsexml.encode('utf-8'), content_type="application/xml")
 
 @view_config(route_name='bill_resource', renderer='json', request_method="PUT")
 def save_bill_resource(request):
