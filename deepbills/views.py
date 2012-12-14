@@ -61,6 +61,7 @@ def save_bill_resource(request):
     """, 'docid commit-time comitter description text'.split())
 
     if not newbill['description'] or not newbill['text']:
+        request.response.status_code = 400
         response['error'] = 'Description and text are required'
         return response
 
@@ -74,6 +75,7 @@ def save_bill_resource(request):
                 q.bind('text', newbill['text'])
                 q.execute()
         except IOError, e:
+            request.response.status_code = 500
             response['error'] = e.message
     return response
 
