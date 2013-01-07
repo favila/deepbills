@@ -212,7 +212,7 @@ def dashboard(request):
         'rows':'',
     }
     query = """
-    for $id in db:open($DB, 'docmetas')/docmeta/@id[matches(., '^[0-9]+hr[0-9]')]
+    for $id in db:open($DB, 'docmetas')/docmeta/@id
     let $i := xs:string($id)
     return <tr>
         <td>{$i}</td>
