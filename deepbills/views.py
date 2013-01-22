@@ -346,3 +346,48 @@ def bill_edit(request):
                 response['error'] = e.message
     
     return response
+
+
+@view_config(route_name="download")
+def download(request):
+    import time
+    from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
+    from cStringIO import StringIO
+    from itertools import izip
+
+
+    xquery = """
+    for $meta in db:open($DB,'docmetas/')/docmeta
+    let $latestrevid := max($meta/revisions/revision/@id)
+    let $latestrev := $meta/revisions/revision[@id = $latestrevid]
+    where $latestrevid > 1
+    return (string($meta/@id), string($latestrev/@commit-time), db:open($DB, $latestrev/@doc)/*)
+    """
+    def parse_iso_time(s):
+        fmt = '%Y-%m-%dT%H:%M:%S.%f'
+        return time.strptime(s, fmt)
+    filedates = set()
+    with sessionfactory() as session:
+        zfp = StringIO()
+        with session.query(xquery, []) as q, ZipFile(zfp, 'w', ZIP_DEFLATED) as zf:
+            for (_, filename), (_, isotime), (_, xml) in izip(*[iter(q.iter())]*3):
+                st = parse_iso_time(isotime)
+                filedates.add(st)
+                zinfo = ZipInfo('catobills/{}.xml'.format(filename), st[:6])
+                zf.writestr(zinfo, xml.encode('utf-8'), ZIP_DEFLATED)
+
+    zfplen = zfp.tell()
+    zfp.seek(0)
+    lastmod = max(filedates)
+
+    return Response(
+        body_file=zfp, content_length=zfplen,
+        content_type="application/zip",
+        content_disposition='attachment; filename="catobills_113-{:.0f}.zip"'.format(time.mktime(lastmod)),
+        last_modified = lastmod
+    )
+
+
+
+
+
