@@ -12,6 +12,22 @@ import models.BaseXClient2 as BaseXClient
 
 from xml.etree import cElementTree as ET
 
+ZERO = datetime.timedelta(0)
+
+# A UTC class.
+
+class UTC(datetime.tzinfo):
+    """UTC"""
+
+    def utcoffset(self, dt):
+        return ZERO
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO
+
 def sessionfactory():
     session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
     defaultbindings = {
@@ -350,44 +366,77 @@ def bill_edit(request):
 
 @view_config(route_name="download")
 def download(request):
+    from dateutil.parser import parse
     import time
     from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
     from cStringIO import StringIO
     from itertools import izip
 
+    def parsetime(timestr):
+        filemod = parse(timestr)
+        if filemod.tzinfo is None:
+            filemod = filemod.replace(tzinfo=UTC())
+        return filemod
 
+    README = """CatoXML-enhanced Federal Bills
+==============================
+
+(Last update in package was on {lastmod})
+
+This package contains:
+
+* `bills` directory: the latest versions of all bill xml files which
+   have had CatoXML inline metadata elements added to them.
+
+* `vocabularies` directory: the latest versions of all entity lookup
+  tables (in xml) used by CatoXML.
+
+More information on the CatoXML namespace and how to interpret CatoXML
+metadata is available at http://namespaces.cato.org/catoxml
+
+"""
     xquery = """
+    declare namespace xs = "http://www.w3.org/2001/XMLSchema";
+    (
     for $meta in db:open($DB,'docmetas/')/docmeta
     let $latestrevid := max($meta/revisions/revision/@id)
     let $latestrev := $meta/revisions/revision[@id = $latestrevid]
     where $latestrevid > 1
-    return (string($meta/@id), string($latestrev/@commit-time), db:open($DB, $latestrev/@doc)/*)
-    """
-    def parse_iso_time(s):
-        fmt = '%Y-%m-%dT%H:%M:%S.%f'
-        return time.strptime(s, fmt)
+    return ('bills/'||$meta/@id||'.xml', string($latestrev/@commit-time), db:open($DB, $latestrev/@doc)/*)
+    ,
+    for $doc in db:open($DB, 'vocabularies/')[/entities]
+    let $filename := substring-after(document-uri($doc), '/')
+    let $updated := $doc/entities/@updated
+    where $filename != 'vocabularies/federal-entities.xml'
+    return ($filename, string($updated), $doc)
+    ,
+    let $schemauri := 'schemas/vocabulary.xsd'
+    for $doc in db:open($DB, $schemauri)
+    let $lastmod := $doc/xs:schema/xs:annotation/xs:appinfo/modified
+    return ($schemauri, string($lastmod), $doc)
+    )"""
+
     filedates = set()
     with sessionfactory() as session:
         zfp = StringIO()
         with session.query(xquery, []) as q, ZipFile(zfp, 'w', ZIP_DEFLATED) as zf:
             for (_, filename), (_, isotime), (_, xml) in izip(*[iter(q.iter())]*3):
-                st = parse_iso_time(isotime)
-                filedates.add(st)
-                zinfo = ZipInfo('catobills/{}.xml'.format(filename), st[:6])
+                filemod = parsetime(isotime)
+                filedates.add(filemod)
+                zinfo = ZipInfo(filename, filemod.timetuple())
                 zf.writestr(zinfo, xml.encode('utf-8'), ZIP_DEFLATED)
+
+            lastmod = max(filedates)
+            readme_zinfo = ZipInfo('README.txt', lastmod.timetuple())
+            zf.writestr(readme_zinfo, README.format(lastmod=lastmod.isoformat()))
 
     zfplen = zfp.tell()
     zfp.seek(0)
-    lastmod = max(filedates)
 
     return Response(
         body_file=zfp, content_length=zfplen,
         content_type="application/zip",
-        content_disposition='attachment; filename="catobills_113-{:.0f}.zip"'.format(time.mktime(lastmod)),
+        content_disposition='attachment; filename="catobills_113-{:.0f}.zip"'.format(time.mktime(lastmod.timetuple())),
         last_modified = lastmod
     )
-
-
-
-
 
