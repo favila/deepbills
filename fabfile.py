@@ -69,3 +69,22 @@ def wsgi_start():
 	with cd('deepbills'):
 		run('source ../env/bin/activate && pserve --daemon development.ini')
 
+def backup_live_db():
+	run('basexclient -Uadmin -Padmin -c"CREATE BACKUP deepbills"')
+
+def download_latest_backup():
+	"""Download the most recent backup on live and install it locally"""
+	output = run('dir BaseXData/deepbills-* | sort -r | head -1').stdout
+	latestfile = output.strip()
+
+	with lcd('~'):
+		get(latestfile, latestfile)
+
+def restore_local():
+	local('basexclient -Uadmin -Padmin -c"RESTORE deepbills"')
+
+
+def sync_db_to_local():
+	backup_live_db()
+	download_latest_backup()
+	restore_local()
