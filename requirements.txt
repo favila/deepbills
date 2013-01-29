@@ -14,7 +14,7 @@ waitress==0.8.1
 wsgiref==0.1.2
 zope.deprecation==4.0.0
 zope.interface==4.0.1
-dateutil===2.1.0
+dateutil==2.1.0
 #not sure if we should be listing ourselves as a requirement
 # -e git+ssh://git@dancingmammoth.beanstalkapp.com:/deepbills.git
 # -e git+https://github.com/favila/deepbills.git#egg=deepbills-dev
