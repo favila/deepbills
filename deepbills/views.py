@@ -1,7 +1,7 @@
 # coding: utf-8
 from pyramid.view import view_config
 from pyramid.response import Response
-from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther, HTTPBadRequest, HTTPNotFound
+from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther, HTTPBadRequest, HTTPNotFound, HTTPCreated, HTTPConflict, HTTPInternalServerError
 from pyramid.url import route_url
 
 from codecs import BOM_UTF8
@@ -51,6 +51,42 @@ def bill_resource(request):
             except IOError:
                 return HTTPBadRequest()
     return Response(BOM_UTF8+responsexml.encode('utf-8'), content_type="application/xml")
+
+@view_config(route_name='bill_create', request_method="POST")
+def create_bill_resource(request):
+# input looks like: <newdoc>
+#     <bill|resolution>...</bill|resolution>
+#     <docmeta>...</docmeta>
+# </newdoc>
+    qcreate = ("""
+declare option db:chop "false";
+let $docmeta  := parse-xml($docmeta),
+    $docid    := $docmeta/docmeta/@id,
+    $docpath  := 'docs/' || $docid || '/1.xml',
+    $metapath := 'docmetas/' || $docid || '.xml'
+return if (db:open($DB, $metapath))
+    then db:output($docid || " exists")
+    else (
+        db:add($DB, $doc, $docpath),
+        db:add($DB, $docmeta, $metapath),
+        db:output($docid || " created")
+    )""",
+    ('doc', 'docmeta'))
+    with sessionfactory() as session:
+        with session.query(*qcreate) as q:
+            q.bind('doc', request.POST['doc'].value.decode('utf-8'))
+            q.bind('docmeta', request.POST['docmeta'].value)
+            msg = q.execute()
+    docid, status = msg.split()
+    if status == 'exists':
+        return HTTPConflict(body=msg+"\n")
+    elif status == 'created':
+        newlocation = "/bills/{}".format(docid)
+        return HTTPCreated(body=newlocation+"\n", headers=[('Location',newlocation)])
+    else:
+        return HTTPInternalServerError(body="unknown error\n")
+
+
 
 @view_config(route_name='bill_resource', renderer='json', request_method="PUT")
 def save_bill_resource(request):

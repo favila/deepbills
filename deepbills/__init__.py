@@ -35,6 +35,7 @@ def main(global_config, **settings):
     config = Configurator(settings=settings)
     config.add_route('dashboard', '/')
     config.add_route('query', '/query')
+    config.add_route('bill_create', '/bills/*/create')
     config.add_route('bill_view', '/bills/{docid}/view')
     config.add_route('bill_edit', '/bills/{docid}/edit')
     config.add_route('bill_resource', '/bills/{docid}')
