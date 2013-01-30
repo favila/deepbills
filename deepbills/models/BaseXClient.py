@@ -334,7 +334,7 @@ class Query(object):
     def __init__(self, session, querytxt):
         """Create query object with session and query"""
         self.__session = session
-        self.__id = self.__exc(chr(0), querytxt)
+        self.__id = self.__exc(chr(0), querytxt).encode('utf-8')
 
     # see http://docs.basex.org/wiki/Server_Protocol
     def bind(self, name, value, datatype=''):
