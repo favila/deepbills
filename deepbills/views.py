@@ -267,7 +267,7 @@ def dashboard(request):
     for $id in db:open($DB, 'docmetas')/docmeta/@id
     let $i := xs:string($id)
     return <tr>
-        <td>{$i}</td>
+        <td><b>{$i}</b> r{max($id/../revisions/revision/@id)}</td>
         <td><a href="/bills/{$i}/activity">activity</a></td>
         <td><a href="/bills/{$i}/view">view</a></td>
         <td><a href="/bills/{$i}/edit">edit</a></td>
