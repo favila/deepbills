@@ -9,82 +9,97 @@ env.editordir = '../AKN/Editor'
 
 
 def push_and_deploy():
-	push_deepbills()
-	deploy()
+    push_deepbills()
+    deploy()
 
 
 def deploy():
-	deploy_virtualenv()
-	deploy_deepbills()
-	deploy_editor()
-	restart_servers()
-	
+    deploy_virtualenv()
+    deploy_deepbills()
+    deploy_editor()
+    restart_servers()
+
+
 def push_deepbills():
-	local('git push beanstalk')
+    local('git push beanstalk')
+
 
 def deploy_virtualenv():
-	#set up the virtualenv
-	run('if [ ! -d env ]; then virtualenv env; fi')
+    #set up the virtualenv
+    run('if [ ! -d env ]; then virtualenv env; fi')
+
 
 def deploy_deepbills():
-	# upload requirements.txt and install everything
-	run('if [ ! -d deepbills ]; then git clone %(gitrepo)s; fi' % env)
-	with cd('deepbills'):
-		run('git pull')
-		run('source ../env/bin/activate && pip install -r requirements.txt && python setup.py develop')
+    # upload requirements.txt and install everything
+    run('if [ ! -d deepbills ]; then git clone %(gitrepo)s; fi' % env)
+    with cd('deepbills'):
+        run('git pull')
+        run('source ../env/bin/activate && pip install -r requirements.txt && python setup.py develop')
+
 
 def deploy_editor():
-	#rsync editor files, make symlink
-	#Only copy HouseXML, Editor, BCN, AkomaNtoso
-	local("rsync -arz -e 'ssh -c arcfour' --exclude='.*' --exclude='.git/' %(editordir)s -- %(user)s@%(host)s:" % env)
+    #rsync editor files, make symlink
+    #Only copy HouseXML, Editor, BCN, AkomaNtoso
+    local("rsync -arz -e 'ssh -c arcfour' --exclude='.*' --exclude='.git/' %(editordir)s -- %(user)s@%(host)s:" % env)
+
 
 def restart_servers():
-	with settings(warn_only=True):
-		wsgi_stop()
-		basex_stop()
-		with settings(user='root'):
-			nginx_stop()
-	wsgi_start()
-	basex_start()
-	with settings(user='root'):
-		nginx_start()
+    with settings(warn_only=True):
+        wsgi_stop()
+        basex_stop()
+        with settings(user='root'):
+            nginx_stop()
+    wsgi_start()
+    basex_start()
+    with settings(user='root'):
+        nginx_start()
+
 
 def wsgi_stop():
-	with cd('deepbills'):
-		run('source ../env/bin/activate && pserve --stop-daemon development.ini')
+    with cd('deepbills'):
+        run('source ../env/bin/activate && pserve --stop-daemon development.ini')
+
 
 def nginx_stop():
-	run('service nginx stop')
+    run('service nginx stop')
+
 
 def basex_stop():
-	run('basexserver stop')
+    run('basexserver stop')
+
 
 def basex_start():
-	run('nohup basexserver -S')
+    run('nohup basexserver -S')
+
 
 def nginx_start():
-	run('service nginx start')
+    run('service nginx start')
+
 
 def wsgi_start():
-	with cd('deepbills'):
-		run('source ../env/bin/activate && pserve --daemon development.ini')
+    with cd('deepbills'):
+        run('source ../env/bin/activate && pserve --daemon development.ini')
+
 
 def backup_live_db():
-	run('basexclient -Uadmin -Padmin -c"CREATE BACKUP deepbills"')
+    run('basexclient -Uadmin -Padmin -c"CREATE BACKUP deepbills"')
+
 
 def download_latest_backup():
-	"""Download the most recent backup on live and install it locally"""
-	output = run('dir BaseXData/deepbills-* | sort -r | head -1').stdout
-	latestfile = output.strip()
+    """Download the most recent backup on live and install it locally"""
+    output = run('dir BaseXData/deepbills-* | sort -r | head -1').stdout
+    latestfile = output.strip()
 
-	with lcd('~'):
-		get(latestfile, latestfile)
+    with lcd('~'):
+        get(latestfile, latestfile)
+
 
 def restore_local():
-	local('basexclient -Uadmin -Padmin -c"RESTORE deepbills"')
+    local('basexclient -Uadmin -Padmin -c"RESTORE deepbills"')
 
 
 def sync_db_to_local():
-	backup_live_db()
-	download_latest_backup()
-	restore_local()
+    backup_live_db()
+    download_latest_backup()
+    restore_local()
+
