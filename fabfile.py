@@ -6,6 +6,7 @@ env.hosts = ['deepbills.dancingmammoth.com']
 env.user = 'favila'
 env.gitrepo = 'https://github.com/favila/deepbills.git'
 env.editordir = '../AKN/Editor'
+env.vocabfiles = ['acts.xml', 'billversions.xml', 'committees.xml', 'federal-bodies.xml', 'people.xml']
 
 
 def push_and_deploy():
@@ -103,3 +104,11 @@ def sync_db_to_local():
     download_latest_backup()
     restore_local()
 
+
+def update_vocabularies():
+    remotefiledir = '/home/favila/data/deepbills/vocabularies'
+    # remotefiledir = '/Users/favila/Documents/workingcopies/deepBills/fdsysScraper/data/templates/vocabularies'
+    replacecmd = 'REPLACE vocabularies/{0} {1}/{0}'
+    replacecmds = '; '.join(replacecmd.format(fn, remotefiledir) for fn in env.vocabfiles)
+    fullcmd = 'basexclient -Uadmin -Padmin -c"OPEN deepbills; SET CHOP true; {}; OPTIMIZE; CLOSE"'
+    run(fullcmd.format(replacecmds))
