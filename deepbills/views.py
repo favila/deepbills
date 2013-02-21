@@ -281,7 +281,6 @@ def dashboard(request):
         <td class="annotation">{if ($annotations) then ($annotations) else ()}</td>
         <td>{sum($doc/descendant::text() ! string-length(.))}</td>
         <td>{tokenize($lastrev/@commit-time, '[T+.]')[position()=(1,2)]}</td>
-        <td><a href="/bills/{$i}/activity">activity</a></td>
         <td><a href="/bills/{$i}/view">view</a></td>
         <td><a href="/bills/{$i}/edit">raw edit</a></td>
         <td><a target="_blank" href="/Editor/Index.html?doc={$i}">edit</a></td>
