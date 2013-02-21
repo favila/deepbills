@@ -897,3 +897,16 @@ fieldset dl dt {
 fieldset dl dd {
 	
 }
+.headerSortUp:after {
+	content: "\25B2";
+}
+.headerSortDown:after {
+	content: "\25BC";
+}
+.bname {
+	font-weight: bold;
+}
+.annotation {
+	font-weight: bold;
+	color: red;
+}
