@@ -87,8 +87,14 @@ $(function(){$('.column').equalHeight();});
 			<table class="tablesorter" cellspacing="0"> 
 			<thead> 
 				<tr> 
-    				<th>Bill Name</th> 
-    				<th colspan="5">Actions</th> 
+    				<th>Bill Name</th>
+    				<th class="header headerSortDown">Type</th>
+    				<th class="header headerSortDown">#</th>
+    				<th>Rev</th>
+    				<th class="annotation">Annotations</th>
+    				<th>Size</th>
+    				<th>Last Modified</th>
+    				<th colspan="4">Actions</th> 
 				</tr> 
 			</thead> 
 			<tbody tal:content="structure rows"/>

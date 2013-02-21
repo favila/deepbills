@@ -264,15 +264,27 @@ def dashboard(request):
         'rows':'',
     }
     query = """
-    for $id in db:open($DB, 'docmetas')/docmeta/@id
-    let $i := xs:string($id)
+    declare namespace cato = "http://namespaces.cato.org/catoxml";
+    for $docmeta in db:open($DB, 'docmetas')/docmeta
+    let $id := $docmeta/@id, $i := xs:string($id), $bill := $docmeta/bill,
+        $btype := xs:string($bill/@type), $bnum := xs:positiveInteger($bill/@number),
+        $lastrevid := max($docmeta/revisions/revision/@id),
+        $lastrev := $docmeta/revisions/revision[@id = $lastrevid],
+        $doc := db:open($DB, $lastrev/@doc)[1],
+        $annotations := count($doc/descendant::cato:entity[@entity-type eq "annotation"])
+    order by $btype, $bnum 
     return <tr>
-        <td><b>{$i}</b> r{max($id/../revisions/revision/@id)}</td>
+        <td class="bname">{$i}</td>
+        <td class="bname">{$btype}</td>
+        <td class="bname">{$bnum}</td>
+        <td>r{$lastrevid}</td>
+        <td class="annotation">{if ($annotations) then ($annotations) else ()}</td>
+        <td>{sum($doc/descendant::text() ! string-length(.))}</td>
+        <td>{tokenize($lastrev/@commit-time, '[T+.]')[position()=(1,2)]}</td>
         <td><a href="/bills/{$i}/activity">activity</a></td>
         <td><a href="/bills/{$i}/view">view</a></td>
-        <td><a href="/bills/{$i}/edit">edit</a></td>
-        <td><a href="/Editor/Index.html?doc={$i}">edit (AKN)</a></td>
-        <td><a href="/bills/{$i}/compare">compare</a></td>
+        <td><a href="/bills/{$i}/edit">raw edit</a></td>
+        <td><a target="_blank" href="/Editor/Index.html?doc={$i}">edit</a></td>
     </tr>"""
     with sessionfactory() as session:
         with session.query(query) as qr:
