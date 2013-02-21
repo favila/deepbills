@@ -275,11 +275,11 @@ def dashboard(request):
     order by $btype, $bnum 
     return <tr>
         <td class="bname">{$i}</td>
-        <td class="bname">{$btype}</td>
-        <td class="bname">{$bnum}</td>
-        <td>r{$lastrevid}</td>
-        <td class="annotation">{if ($annotations) then ($annotations) else ()}</td>
-        <td>{sum($doc/descendant::text() ! string-length(.))}</td>
+        <td class="bname number">{$btype}</td>
+        <td class="bname number">{$bnum}</td>
+        <td class="number">r{$lastrevid}</td>
+        <td class="annotation number">{if ($annotations) then ($annotations) else ()}</td>
+        <td class="number">{sum($doc/descendant::text() ! string-length(.))}</td>
         <td>{tokenize($lastrev/@commit-time, '[T+.]')[position()=(1,2)]}</td>
         <td><a href="/bills/{$i}/view">view</a></td>
         <td><a href="/bills/{$i}/edit">raw edit</a></td>
