@@ -87,7 +87,7 @@ def backup_live_db():
 
 
 def download_latest_backup():
-    """Download the most recent backup on live and install it locally"""
+    """Download the most recent backup on live"""
     output = run('dir BaseXData/deepbills-* | sort -r | head -1').stdout
     latestfile = output.strip()
 
