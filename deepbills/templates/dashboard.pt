@@ -80,7 +80,7 @@ $(function(){$('.column').equalHeight();});
 	
 	<section id="main" class="column">
 		
-		<article class="module width_3_quarter">
+		<article class="module width_full">
 		<header><h3>Bills</h3></header>
 
 		<div class="tab_container">
