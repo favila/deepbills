@@ -31,7 +31,7 @@ class UTC(datetime.tzinfo):
 def sessionfactory():
     session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
     defaultbindings = {
-        'DB': 'deepbills'
+        'DBua': 'deepbills'
     }
     session.execute('SET BINDINGS '+ BaseXClient.escapebindings(defaultbindings))
     return session
@@ -40,6 +40,7 @@ def sessionfactory():
 def bill_resource(request):
     docid = request.matchdict['docid']
     qlatest = ("""
+    declare variable $DB as xs:string := xs:string($DBua);
     let $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()]
     return db:open($DB, $latestrevision/@doc)/*
     """, ['docid'])
@@ -54,12 +55,9 @@ def bill_resource(request):
 
 @view_config(route_name='bill_create', request_method="POST")
 def create_bill_resource(request):
-# input looks like: <newdoc>
-#     <bill|resolution>...</bill|resolution>
-#     <docmeta>...</docmeta>
-# </newdoc>
     qcreate = ("""
 declare option db:chop "false";
+declare variable $DB as xs:string := xs:string($DBua);
 let $docmeta  := parse-xml($docmeta),
     $docid    := $docmeta/docmeta/@id,
     $docpath  := 'docs/' || $docid || '/1.xml',
@@ -100,6 +98,7 @@ def save_bill_resource(request):
     }
     qupdate = ("""
         declare option db:chop "false";
+        declare variable $DB as xs:string := xs:string($DBua);
         declare variable $docmeta := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta;
         declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
         declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
@@ -146,6 +145,7 @@ def vocabulary_lookup(request):
     query = request.GET.get('q')
     xquery = ("""
         import module namespace functx = "http://www.functx.com";
+        declare variable $DB as xs:string := xs:string($DBua);
         declare variable $vocab as xs:string external;
         declare variable $query as xs:string external;
         declare function local:extract-entity-name-id-attr($entity as element()*) as node()* {
@@ -190,6 +190,7 @@ def entity_lookup(request):
     vocab = 'vocabularies/%s.xml' % request.matchdict['vocabid']
     entityid = request.matchdict['entityid']
     xquery = ("""
+        declare variable $DB as xs:string := xs:string($DBua);
         declare variable $vocab as xs:string external;
         declare variable $entityid as xs:string external;
         declare function local:extract-entity-name-id-attr($entity as element()*) as node()* {
@@ -201,6 +202,7 @@ def entity_lookup(request):
                 })
             else ()
         };
+        let $DB := xs:string($DB)
         let $entity := db:open($DB, $vocab)/*/*[@id eq $entityid],
             $parentid := xs:string($entity/@parent-id)
         return 
@@ -265,6 +267,7 @@ def dashboard(request):
     }
     query = """
     declare namespace cato = "http://namespaces.cato.org/catoxml";
+    declare variable $DB as xs:string := xs:string($DBua);
     for $docmeta in db:open($DB, 'docmetas')/docmeta
     let $id := $docmeta/@id, $i := xs:string($id), $bill := $docmeta/bill,
         $btype := xs:string($bill/@type), $bnum := xs:positiveInteger($bill/@number),
@@ -303,6 +306,7 @@ def bill_view(request):
     }
     
     qrevision = ("""
+        declare variable $DB as xs:string := xs:string($DBua);
         let $docuri := 'docmetas/' || $docid || '.xml'
         for $latestrevision in db:open($DB, $docuri)/docmeta/revisions/revision[last()]
         let $latestdoc := db:open($DB, $latestrevision/@doc)
@@ -353,12 +357,14 @@ def bill_edit(request):
     
     
     qget = ("""
+    declare variable $DB as xs:string := xs:string($DBua);
     declare variable $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()];
     db:open($DB, $latestrevision/@doc)
     """, ['docid'])
     
     qupdate = ("""
         declare option db:chop "false";
+        declare variable $DB as xs:string := xs:string($DBua);
         declare variable $docmeta := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta;
         declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
         declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
@@ -444,6 +450,7 @@ metadata is available at http://namespaces.cato.org/catoxml
 """
     xquery = """
     declare namespace xs = "http://www.w3.org/2001/XMLSchema";
+    declare variable $DB as xs:string := xs:string($DBua);
     (
     for $meta in db:open($DB,'docmetas/')/docmeta
     let $latestrevid := max($meta/revisions/revision/@id)
