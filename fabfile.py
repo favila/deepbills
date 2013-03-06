@@ -97,6 +97,7 @@ def download_latest_backup():
 
 def restore_local():
     local('basexclient -Uadmin -Padmin -c"RESTORE deepbills"')
+    local('basexclient -Uadmin -Padmin -c"OPEN deepbills; OPTIMIZE; CLOSE"')
 
 
 def sync_db_to_local():
