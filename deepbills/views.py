@@ -114,8 +114,15 @@ def save_bill_resource(request):
         declare variable $docmeta := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta;
         declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
         declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
+        declare variable $oldstatus := xs:string($docmeta/revisions/revision[
+                @id = fn:max($docmeta/revisions/revision[@status!='']/@id)
+            ]/@status);
         insert nodes 
-            <revision id="{$newrev}" commit-time="{$commit-time}" comitter="{$comitter}" doc="{concat('/', $newdocpath)}">
+            <revision id="{$newrev}" commit-time="{$commit-time}" 
+                comitter="{$comitter}" 
+                doc="{concat('/', $newdocpath)}"
+                status="{$oldstatus}"
+                >
                 <description>{$description}</description>
             </revision>
         as last into $docmeta/revisions,
