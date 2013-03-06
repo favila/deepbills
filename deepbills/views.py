@@ -292,8 +292,9 @@ def dashboard(request):
         <td class="bname">{$i}</td>
         <td class="bname number">{$btype}</td>
         <td class="bname number">{$bnum}</td>
-        <td class="number">r{$lastrevid}</td>
+        <td class="number revision">{$lastrevid}</td>
         <td class="annotation number">{if ($annotations) then ($annotations) else ()}</td>
+        <td>{xs:string($lastrev/@status)}</td>
         <td class="number">{sum($doc/descendant::text() ! string-length(.))}</td>
         <td>{tokenize($lastrev/@commit-time, '[T+.]')[position()=(1,2)]}</td>
         <td><a href="/bills/{$i}/view">view</a></td>
