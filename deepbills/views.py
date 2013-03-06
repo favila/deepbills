@@ -4,17 +4,16 @@ from pyramid.response import Response
 from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther, HTTPBadRequest, HTTPNotFound, HTTPCreated, HTTPConflict, HTTPInternalServerError
 from pyramid.url import route_url
 
-from codecs import BOM_UTF8
-
-import datetime
-
 import models.BaseXClient2 as BaseXClient
 
 from xml.etree import cElementTree as ET
 
+from codecs import BOM_UTF8
+
+import datetime
+
 ZERO = datetime.timedelta(0)
 
-# A UTC class.
 
 class UTC(datetime.tzinfo):
     """UTC"""
@@ -27,6 +26,19 @@ class UTC(datetime.tzinfo):
 
     def dst(self, dt):
         return ZERO
+
+UTC = UTC()
+
+
+def now():
+    """Return datetime object in UTC without microseconds"""
+    return datetime.datetime.utcnow().replace(microsecond=0, tzinfo=UTC)
+
+
+def now_isoformat():
+    """Return current UTC time as an iso-formatted string"""
+    return now().isoformat()
+
 
 def sessionfactory():
     session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
@@ -91,7 +103,7 @@ def save_bill_resource(request):
     docid = request.matchdict['docid']
     response = {}
     newbill = {
-        'commit-time': datetime.datetime.now().isoformat(),
+        'commit-time': now_isoformat(),
         'comitter' : '/users/favila.xml',
         'description': 'Edited via AKN',
         'text': request.body.decode('utf-8'),
@@ -301,7 +313,7 @@ def bill_view(request):
     response = {
         'page_title': 'View Bill {}'.format(docid),
         'site_name': 'DeepBills',
-        'bill' : dict(name='name', revision="1", metadata={'commit-time':'', 'committer':'','description':''}, text="<root></root>"),
+        'bill' : dict(name='name', revision="1", metadata={'status':'','commit-time':'', 'committer':'','description':''}, text="<root></root>"),
         'error': '',
     }
     
@@ -310,13 +322,14 @@ def bill_view(request):
         let $docuri := 'docmetas/' || $docid || '.xml'
         for $latestrevision in db:open($DB, $docuri)/docmeta/revisions/revision[last()]
         let $latestdoc := db:open($DB, $latestrevision/@doc)
-        return 
+        return
         (
             string($latestrevision/../../@id),
             string($latestrevision/@id),
             string($latestrevision/@commit-time),
             string($latestrevision/@comitter),
             string($latestrevision/description),
+            string($latestrevision/@status),
             $latestdoc
         )
     """, ['docid'])
@@ -324,7 +337,7 @@ def bill_view(request):
         try:
             with session.query(*qrevision) as qr:
                 qr.bind('docid', docid)
-                qresponse = [v for t,v in qr.iter()]
+                qresponse = [v for t, v in qr.iter()]
                 if not qresponse:
                     raise HTTPNotFound
                 response['bill']['name'] = qresponse[0]
@@ -332,7 +345,9 @@ def bill_view(request):
                 response['bill']['metadata']['commit-time'] = qresponse[2]
                 response['bill']['metadata']['committer'] = qresponse[3]
                 response['bill']['metadata']['description'] = qresponse[4]
-                response['bill']['text'] = qresponse[5]
+                response['bill']['metadata']['status'] = qresponse[5]
+                response['bill']['text'] = qresponse[6]
+
         except IOError, e:
             response['error'] = e.message
     
@@ -350,16 +365,17 @@ def bill_edit(request):
             'name':docid,
             'description': '',
             'text': '',
+            'revision': '',
+            'status'   : '',
         },
         'error': '',
+        'statuses' : ['new', 'auto-markup', 'in-progress', 'needs-review', 'complete'],
     }
-    
-    
-    
+        
     qget = ("""
     declare variable $DB as xs:string := xs:string($DBua);
     declare variable $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()];
-    db:open($DB, $latestrevision/@doc)
+    (db:open($DB, $latestrevision/@doc), xs:string($latestrevision/@status), xs:string($latestrevision/@id))
     """, ['docid'])
     
     qupdate = ("""
@@ -369,51 +385,62 @@ def bill_edit(request):
         declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
         declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
         insert nodes 
-            <revision id="{$newrev}" commit-time="{$commit-time}" comitter="{$comitter}" doc="{concat('/', $newdocpath)}">
+            <revision id="{$newrev}" commit-time="{$commit-time}"
+            comitter="{$comitter}" doc="{concat('/', $newdocpath)}"
+            status="{$status}">
                 <description>{$description}</description>
             </revision>
         as last into $docmeta/revisions,
         db:add($DB, $text, $newdocpath)
     
-    """, 'docid commit-time comitter description text'.split())
+    """, 'docid commit-time comitter status description text'.split())
     
-    if request.method=='GET':
+    def addbilldata(docid, response):
         with sessionfactory() as session:
             try:
                 with session.query(*qget) as qr:
                     qr.bind('docid', docid)
-                    qresponse = [v for t,v in qr.iter()]
+                    qresponse = [v for t, v in qr.iter()]
                     response['bill']['text'] = qresponse[0]
+                    response['bill']['status'] = qresponse[1]
+                    response['bill']['revision'] = qresponse[2]
             except IOError, e:
                 response['error'] = e.message
-            
-    elif request.method=='POST':
+
+    if request.method == 'GET':
+        addbilldata(docid, response)
+    elif request.method == 'POST':
         newbill = {
-            'commit-time': datetime.datetime.now().isoformat(),
-            'comitter' : '/users/favila.xml',
+            'commit-time': now_isoformat(),
+            'comitter': '/users/favila.xml',
             'description': request.POST.get('description', '').strip(),
             'text': request.POST.get('text', '').strip(),
+            'status': request.POST.get('status', '').strip(),
         }
+        print newbill
+        response['bill']['status'] = newbill['status']
         response['bill']['description'] = newbill['description']
         response['bill']['text'] = newbill['text']
-        
-        if not newbill['description'] or not newbill['text']:
-            response['error'] = 'Description and text are required'
+
+        if not newbill['text'] or not newbill['status']:
+            addbilldata(docid, response)
+            response['error'] = 'Text and status are required'
             return response
-    
+
         with sessionfactory() as session:
             try:
                 with session.query(*qupdate) as q:
                     q.bind('docid', docid)
                     q.bind('commit-time', newbill['commit-time'])
                     q.bind('comitter', newbill['comitter'])
+                    q.bind('status', newbill['status'])
                     q.bind('description', newbill['description'])
                     q.bind('text', newbill['text'])
                     q.execute()
                     return HTTPSeeOther(location="/bills/{}/view".format(docid))
             except IOError, e:
                 response['error'] = e.message
-    
+
     return response
 
 

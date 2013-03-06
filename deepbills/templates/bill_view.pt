@@ -85,15 +85,15 @@ $(function(){$('.column').equalHeight();});
 	<section id="main" class="column">
 		<h4 tal:condition="error" class="alert_error">${error}</h4>
 		<article class="module width_full">
-			<header><h3>View Bill: ${bill['name']}, revision ${bill['revision']}</h3></header>
+			<header><h3>View Bill: ${bill['name']} r${bill['revision']}</h3></header>
 			<div class="module_content">
 				<fieldset>
 					<label>Metadata</label>
 					<dl>
+						<dt>status:</dt>
+						<dd>${bill['metadata']['status']}<dd>						
 						<dt>time:</dt>
 						<dd>${bill['metadata']['commit-time']}<dd>
-						<dt>committer:</dt>
-						<dd>${bill['metadata']['committer']}</dd>
 						<dt>description:</dt>
 						<dd>${bill['metadata']['description']}</dd>
 					</dd>

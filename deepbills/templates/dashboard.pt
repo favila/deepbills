@@ -59,12 +59,13 @@ $(function(){$('.column').equalHeight();});
 	
 	<aside id="sidebar" class="column">
 		<form class="quick_search">
-			<input disabled type="text" value="Quick Search" onfocus="if(!this._haschanged){this.value=''};this._haschanged=true;">
+			<input disabled="disabled" type="text" value="Quick Search" onfocus="if(!this._haschanged){this.value=''};this._haschanged=true;" />
 		</form>
 		<hr/>
 		<h3>Queries</h3>
 		<ul class="toggle">
 			<li class="icn_folder"><a href="/query">Query Panel</a></li>
+		</ul>
 		<h3>Bills</h3>
 		<ul class="toggle">
 			<li class="icn_new_article"><a href="/activity">View Activity</a></li>

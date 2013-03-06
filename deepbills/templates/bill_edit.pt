@@ -56,7 +56,7 @@ $(function(){$('.column').equalHeight();});
 			<article class="breadcrumbs">
 				<a href="/">Dashboard</a>
 				<div class="breadcrumb_divider"></div>
-				<a class="current">Revise ${bill['name']}</a>
+				<a class="current">Revise ${bill.name}</a>
 			</article>
 		</div>
 	</section><!-- end of secondary bar -->
@@ -85,16 +85,22 @@ $(function(){$('.column').equalHeight();});
 	<section id="main" class="column">
 		<h4 tal:condition="error" class="alert_error">${error}</h4>
 		<article class="module width_full">
-			<form method="POST" tal:attributes="action '/bills/'+bill['name']+'/edit'">
-			<header><h3>Edit Bill: ${bill['name']}</h3></header>
+			<form method="POST" tal:attributes="action string: /bills/${bill.name}/edit">
+			<header><h3>Edit Bill: ${bill.name} r${bill.revision}</h3></header>
 			<div class="module_content">
 				<fieldset>
-					<label>Description</label>
-					<input type="text" name="description" tal:attributes="value bill['description']" />
+					<label>Change Description</label>
+					<input type="text" name="description" tal:attributes="value bill.description" />
+					<label>Status</label>
+					<select name="status">
+						<option tal:repeat="s statuses" tal:define="selected [None, 'selected']"
+							tal:attributes="value s; selected selected[bill.status==s]"
+							tal:content="s" />
+					</select>
 				</fieldset>
 				<fieldset>
 					<label>XML</label>
-					<textarea name="text" rows="40">${bill['text']}</textarea>
+					<textarea name="text" rows="40">${bill.text}</textarea>
 				</fieldset>
 				<div class="clear"></div>
 			</div>
