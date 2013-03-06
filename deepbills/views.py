@@ -383,7 +383,7 @@ def bill_edit(request):
     qget = ("""
     declare variable $DB as xs:string := xs:string($DBua);
     declare variable $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()];
-    (db:open($DB, $latestrevision/@doc), xs:string($latestrevision/@status), xs:string($latestrevision/@id))
+    (db:open($DB, $latestrevision/@doc), (xs:string($latestrevision/@status), 'new')[1], xs:string($latestrevision/@id))
     """, ['docid'])
     
     qupdate = ("""
