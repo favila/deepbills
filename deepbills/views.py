@@ -463,7 +463,7 @@ def download(request):
     def parsetime(timestr):
         filemod = parse(timestr)
         if filemod.tzinfo is None:
-            filemod = filemod.replace(tzinfo=UTC())
+            filemod = filemod.replace(tzinfo=UTC)
         return filemod
 
     README = """CatoXML-enhanced Federal Bills
