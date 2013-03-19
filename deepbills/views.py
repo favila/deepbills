@@ -121,7 +121,8 @@ def save_bill_resource(request):
             <revision id="{$newrev}" commit-time="{$commit-time}" 
                 comitter="{$comitter}" 
                 doc="{concat('/', $newdocpath)}"
-                status="{$oldstatus}"
+                status="{if ($oldstatus = ('new','auto-markup'))
+                    then 'in-progress' else $oldstatus}"
                 >
                 <description>{$description}</description>
             </revision>
