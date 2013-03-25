@@ -106,6 +106,15 @@ def sync_db_to_local():
     restore_local()
 
 
+def new_bills_and_automarkup():
+    backup_live_db()
+    with lcd('../fdsysScraper/data'):
+        local('make')
+        run('make createnew_remote')
+    with cd('data'):
+        run('./add_new_bills.sh')
+    run('basexclient -Uadmin -Padmin create-auto-markup-docs.bxs')
+
 
 def update_vocabularies():
     remotefiledir = '/home/favila/data/deepbills/vocabularies'
