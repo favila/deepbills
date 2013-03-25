@@ -105,8 +105,6 @@ def sync_db_to_local():
     download_latest_backup()
     restore_local()
 
-def index_similar_texts():
-    local("""basexclient -Uadmin -Padmin -q'import module namespace h = "http://deepbills.dancingmammoth.com/modules/helpers"; h:clear-similars()' -q'import module namespace h = "http://deepbills.dancingmammoth.com/modules/helpers"; h:index-bills()'""")
 
 
 def update_vocabularies():
