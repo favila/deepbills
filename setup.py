@@ -10,18 +10,18 @@ requires = [
     'pyramid',
     'pyramid_debugtoolbar',
     'waitress',
-    ]
+]
 
 setup(name='deepbills',
       version='0.0',
       description='deepbills',
-      long_description=README + '\n\n' +  CHANGES,
+      long_description=README + '\n\n' + CHANGES,
       classifiers=[
-        "Programming Language :: Python",
-        "Framework :: Pylons",
-        "Topic :: Internet :: WWW/HTTP",
-        "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
-        ],
+          "Programming Language :: Python",
+          "Framework :: Pylons",
+          "Topic :: Internet :: WWW/HTTP",
+          "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+      ],
       author='',
       author_email='',
       url='',
@@ -31,10 +31,9 @@ setup(name='deepbills',
       zip_safe=False,
       install_requires=requires,
       tests_require=requires,
-      test_suite="deepbills",
-      entry_points = """\
-      [paste.app_factory]
-      main = deepbills:main
+      test_suite="deepbills.tests",
+      entry_points="""\
+        [paste.app_factory]
+        main = deepbills:main
       """,
       )
-
