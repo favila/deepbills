@@ -278,13 +278,25 @@ def query(request):
     response['result'] = "\n".join(response['result'])
     return response
 
+@view_config(route_name='bill_types', renderer="templates/bill_types.pt", http_cache=3600)
+def bill_types(request):
+    response = {
+        'page_title': 'Dashboard',
+        'site_name': 'DeepBills',
+        'bill_types':'hr hres hconres hjres s sres sconres sjres'.split(),
+    }
+    return response
+
 @view_config(route_name='dashboard', renderer="templates/dashboard.pt", http_cache=3600)
+@view_config(route_name='dashboard_all', renderer="templates/dashboard.pt", http_cache=3600)
 def dashboard(request):
     response = {
         'page_title': 'Dashboard',
         'site_name': 'DeepBills',
         'rows':'',
     }
+    if 'billtype' in request.matchdict:
+        response['page_title'] += ': '+request.matchdict['billtype']
     query = """
     declare namespace cato = "http://namespaces.cato.org/catoxml";
     declare variable $DB as xs:string := xs:string($DBua);
@@ -295,6 +307,7 @@ def dashboard(request):
         $lastrev := $docmeta/revisions/revision[@id = $lastrevid],
         $doc := db:open($DB, $lastrev/@doc)[1],
         $annotations := count($doc/descendant::cato:entity[@entity-type eq "annotation"])
+    where if ($btype_filter) then ($btype = $btype_filter) else (true())
     order by $btype, $bnum 
     return <tr>
         <td class="bname">{$i}</td>
@@ -311,6 +324,10 @@ def dashboard(request):
     </tr>"""
     with sessionfactory() as session:
         with session.query(query) as qr:
+            if 'billtype' in request.matchdict:
+                qr.bind('btype_filter', request.matchdict['billtype'], 'xs:string')
+            else:
+                qr.bind('btype_filter', 'false()', 'xs:boolean')
             response['rows'] = qr.execute()
 
     return response
