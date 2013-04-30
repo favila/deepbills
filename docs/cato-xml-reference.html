@@ -1,0 +1,670 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>CatoXML Reference</title>
+
+<style>html { font-size: 100%; overflow-y: scroll; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+
+body{
+  color:#444;
+  font-family:Georgia, Palatino, 'Palatino Linotype', Times, 'Times New Roman',
+              "Hiragino Sans GB", "STXihei", "微软雅黑", serif;
+  font-size:12px;
+  line-height:1.5em;
+  background:#fefefe;
+  width: 45em;
+  margin: 10px auto;
+  padding: 1em;
+  outline: 1300px solid #FAFAFA;
+}
+
+a{ color: #0645ad; text-decoration:none;}
+a:visited{ color: #0b0080; }
+a:hover{ color: #06e; }
+a:active{ color:#faa700; }
+a:focus{ outline: thin dotted; }
+a:hover, a:active{ outline: 0; }
+
+span.backtick {
+  border:1px solid #EAEAEA;
+  border-radius:3px;
+  background:#F8F8F8;
+  padding:0 3px 0 3px;
+}
+
+::-moz-selection{background:rgba(255,255,0,0.3);color:#000}
+::selection{background:rgba(255,255,0,0.3);color:#000}
+
+a::-moz-selection{background:rgba(255,255,0,0.3);color:#0645ad}
+a::selection{background:rgba(255,255,0,0.3);color:#0645ad}
+
+p{
+margin:1em 0;
+}
+
+img{
+max-width:100%;
+}
+
+h1,h2,h3,h4,h5,h6{
+font-weight:normal;
+color:#111;
+line-height:1em;
+}
+h4,h5,h6{ font-weight: bold; }
+h1{ font-size:2.5em; }
+h2{ font-size:2em; border-bottom:1px solid silver; padding-bottom: 5px; }
+h3{ font-size:1.5em; }
+h4{ font-size:1.2em; }
+h5{ font-size:1em; }
+h6{ font-size:0.9em; }
+
+blockquote{
+color:#666666;
+margin:0;
+padding-left: 3em;
+border-left: 0.5em #EEE solid;
+}
+hr { display: block; height: 2px; border: 0; border-top: 1px solid #aaa;border-bottom: 1px solid #eee; margin: 1em 0; padding: 0; }
+
+
+pre , code, kbd, samp { 
+  color: #000; 
+  font-family: monospace; 
+  font-size: 0.88em; 
+  border-radius:3px;
+  background-color: #F8F8F8;
+  border: 1px solid #CCC; 
+}
+pre { white-space: pre; white-space: pre-wrap; word-wrap: break-word; padding: 5px 12px;}
+pre code { border: 0px !important; padding: 0;}
+code { padding: 0 3px 0 3px; }
+
+b, strong { font-weight: bold; }
+
+dfn { font-style: italic; }
+
+ins { background: #ff9; color: #000; text-decoration: none; }
+
+mark { background: #ff0; color: #000; font-style: italic; font-weight: bold; }
+
+sub, sup { font-size: 75%; line-height: 0; position: relative; vertical-align: baseline; }
+sup { top: -0.5em; }
+sub { bottom: -0.25em; }
+
+ul, ol { margin: 1em 0; padding: 0 0 0 2em; }
+li p:last-child { margin:0 }
+dd { margin: 0 0 0 2em; }
+
+img { border: 0; -ms-interpolation-mode: bicubic; vertical-align: middle; }
+
+table { border-collapse: collapse; border-spacing: 0; }
+td { vertical-align: top; }
+
+@media only screen and (min-width: 480px) {
+body{font-size:14px;}
+}
+
+@media only screen and (min-width: 768px) {
+body{font-size:16px;}
+}
+
+@media print {
+  * { background: transparent !important; color: black !important; filter:none !important; -ms-filter: none !important; }
+  body{font-size:12pt; max-width:100%; outline:none;}
+  a, a:visited { text-decoration: underline; }
+  hr { height: 1px; border:0; border-bottom:1px solid black; }
+  a[href]:after { content: " (" attr(href) ")"; }
+  abbr[title]:after { content: " (" attr(title) ")"; }
+  .ir a:after, a[href^="javascript:"]:after, a[href^="#"]:after { content: ""; }
+  pre, blockquote { border: 1px solid #999; padding-right: 1em; page-break-inside: avoid; }
+  tr, img { page-break-inside: avoid; }
+  img { max-width: 100% !important; }
+  @page :left { margin: 15mm 20mm 15mm 10mm; }
+  @page :right { margin: 15mm 10mm 15mm 20mm; }
+  p, h2, h3 { orphans: 3; widows: 3; }
+  h2, h3 { page-break-after: avoid; }
+}
+</style></head><body><h1 id="cato-xml-reference">Cato XML Reference</h1>
+
+<p>Last updated: 2013-04-30</p>
+
+<p>This document describes CatoXML, which is a number of inline semantic metadata
+extensions to “HouseXML” in the <code>http://namespaces.cato.org/catoxml</code> namespace.</p>
+
+<p>“HouseXML” is an unofficial term for the XML schema of legislation drafted
+by the United States Congress (House and Senate) and documented at 
+<a href="http://xml.house.gov">xml.house.gov</a>.</p>
+
+<p>These metadata extensions are collectively called “CatoXML”.</p>
+
+<h2 id="definitions">Definitions</h2>
+
+<p>Prefix <code>cato:</code> is bound to namespace <code>http://namespaces.cato.org/catoxml</code></p>
+
+<p>Attribute names are prefixed with <code>@</code>; e.g. <code>@foobar</code> for an attribute
+named <code>foobar</code>.</p>
+
+<p>A metadata element is an element that expresses metadata about a span
+of text. CatoXML defines four metadata elements: <code>cato:entity</code>,
+<code>cato:property</code>, <code>cato:funds-and-year</code>, and <code>cato:entity-ref</code>. Certain
+HouseXML elements can also express metadata equivalent to CatoXML
+elements.</p>
+
+<h2 id="catoentity-element"><code>cato:entity</code> Element</h2>
+
+<p>Used to contain text that creates an entity. Any child metadata
+elements are properties of the immediate parent entity.</p>
+
+<h3 id="attributes-of-catoentity">Attributes of <code>cato:entity</code></h3>
+
+<p><code>@entity-type</code>: Required. States the type of the entity. Valid
+values are:</p>
+
+<ul>
+<li><code>law-citation</code>: Parallel Law Citation: used to contain multiple law
+citations which are equivalent.</li>
+<li><code>auth-authorization</code>: Authorization</li>
+<li><code>auth-regulation</code>: Regulation</li>
+<li><code>auth-interpretation</code>: Desired interpretation of a passage by
+Congress.</li>
+<li><code>auth-auth-approp</code>: Authorizations of Appropriations (species of
+"Budget Authority")</li>
+<li><code>auth-approp</code>: Appropriations (species of "Budget Authority")</li>
+</ul>
+
+<p>Note: the <code>auth-authorization</code>, <code>auth-regulation</code>, and <code>auth-interpretation</code>
+types are currently unused, but these names are reserved for future use.</p>
+
+<h2 id="catoproperty-element"><code>cato:property</code> Element</h2>
+
+<p>Used to contain text which is constitutive of an entity but which is not
+itself an entity or reference to an entity.</p>
+
+<p>A <code>cato:property</code> element must be contained by a <code>cato:entity</code> element.</p>
+
+<h3 id="attributes-of-catoproperty">Attributes of <code>cato:property</code></h3>
+
+<ol>
+<li><p><code>@name</code>: <strong>Required.</strong>  States the name of this property.  Property names
+are specific to a certain entity type.  Two property names are defined:</p>
+
+<ul>
+<li><code>funds-source</code>: used to contain the source of funds for an
+<code>auth-auth-approp</code> or <code>auth-approp</code> entity.</li>
+<li><code>purpose</code>: used to contain the purpose of an authority entity
+(<code>auth-auth-approp</code>, or <code>auth-approp</code>).</li>
+</ul></li>
+<li><p><code>@value</code>: States the machine-readable value of this property. If the
+property element contains text, then this attribute contains a
+normalized, machine-readable version of that text. If this
+attribute is omitted, then the value of this property is the text
+content of this element and it is not required to be
+machine-readble.</p></li>
+</ol>
+
+<h2 id="catofunds-and-year-element"><code>cato:funds-and-year</code> Element</h2>
+
+<p>Used to contain text that indicates the amount of funds made available
+and the year during which those funds are made available by an
+authority entity. An authority entity may have multiple
+<code>cato:funds-and-year</code> elements.</p>
+
+<p>This element exists as a shorthand for document markup to avoid the
+need for id references and empty elements for one or another of its
+property values. It expresses the same information as the following
+set of <code>cato:entity</code> and <code>cato:property</code> elements:</p>
+
+<pre><code>&lt;entity entity-type="funds-and-year"&gt;&lt;property name="amount"
+value="1000"&gt;$1000&lt;/property&gt; in &lt;property name="year"
+value="2011"&gt;2011&lt;/property&gt;&lt;/entity&gt;
+</code></pre>
+
+<h3 id="attributes-of-catofunds-and-year">Attributes of cato:funds-and-year</h3>
+
+<ol>
+<li><code>@amount</code>: Required. States the amount of money in US dollars that
+the authority proposes to be set aside. This attribute’s value is
+a positive integer or the special value <code>indefinite</code>, indicating
+that no specific amount was named.</li>
+<li><p><code>@year</code>: Required. States the fiscal years during which the stated
+amount may be spent. This attribute’s value is a set of fiscal
+years expressed as one of the following:</p>
+
+<ul>
+<li>A four-digit integer, indicating that the <code>@amount</code> is
+appropriated once to be spent during the indicated year.</li>
+<li>A list of four digit integers separated by commas (e.g.
+<code>2012,2013,2014</code>) indicating that the <code>@amount</code> is appropriated
+again at the beginning of each listed fiscal year. This
+syntax is equivalent to using multiple <code>cato:funds-and-year</code>
+elements with a single fiscal year for each one.</li>
+<li>A single four-digit year followed by a comma and two periods
+(e.g. <code>2013,..</code>) indicating that the <code>@amount</code> is appropriated
+at the beginning of the first indicated year and
+re-appropriated again at the beginning of each following year
+in perpetuity.</li>
+<li>Two four-digit integers joined by two periods, e.g.
+(<code>2012..2014</code>), indicating that the <code>@amount</code> is appropriated
+once at the beginning of the fiscal year on the left-hand
+side and is available to be spent until the end of the fiscal
+year on the right-hand side. For example,
+<code>&lt;cato:funds-and-year funds="100" year="2012..2014"/&gt;</code>
+indicates that $100 is made available at the beginning of the
+2012 fiscal year and is available until the end of the 2014
+fiscal year.</li>
+<li>A single four-digit integer followed by two dots (e.g.,
+<code>2013..</code>), indicating that the <code>@amount</code> is appropriated once
+and is available until it is expended.</li>
+<li>Nothing, indicating that no fiscal year is discernible from the text.</li>
+</ul></li>
+</ol>
+
+<h2 id="catoentity-ref-element"><code>cato:entity-ref</code> Element</h2>
+
+<p>Used to contain text that refers to but does not create an entity.</p>
+
+<h3 id="attributes-of-catoentity-ref">Attributes of <code>cato:entity-ref</code></h3>
+
+<p>In addition to <code>@entity-type</code>, one and only one of the <code>entity-id</code>,
+<code>entity-parent-id</code>, or <code>value</code> attributes are required.</p>
+
+<ol>
+<li><p><code>@entity-type</code>: Required. States the type of entity that the
+enclosed text references. Valid values are:</p>
+
+<ul>
+<li><code>federal-body</code>: Federal organizational unit citation, including
+Agencies and Bureaus. Uses the <code>@entity-id</code> or
+<code>@entity-parent-id</code> attribute.</li>
+<li><code>committee</code>: Congressional Committee citation. Uses the
+<code>@entity-id</code> attribute.</li>
+<li><code>person</code>: Federal elective officeholder citation. Uses the
+<code>@entity-id</code> attribute.</li>
+<li><code>act</code>: Popular name citation. Uses the <code>@value</code> attribute.</li>
+<li><code>uscode</code>: US Code section, chapter, or appendix citation. Uses
+the <code>@value</code> attribute.</li>
+<li><code>public-law</code>: Public law citation. Uses the <code>@value</code> attribute.</li>
+<li><code>statute-at-large</code>: Statutes at Large citation. Uses the <code>@value</code>
+attribute.</li>
+</ul></li>
+<li><p><code>entity-id</code>: States the id of the entity that the enclosed text references.
+Entity ids must be unique among all others with the same entity-type.</p></li>
+<li><code>entity-parent-id</code>: States the id of the parent entity of the entity that
+the enclosed text references. This attribute is used when the entity does
+not have an id or its id is not known but a parent entity is known.</li>
+<li><code>value</code>: Expresses the content of the text of the entity-ref (not of the
+entity) in a consistent, documented, machine-parsable format
+specific to its entity-type. Different <code>value</code> attribute values may
+refer to the same entity.</li>
+<li><code>proposed</code>: States whether the current entity reference is to an
+existing or a proposed entity. The value of this attribute is
+<code>true</code> or <code>false</code>. If this attribute is absent, then the value of
+this attribute is <code>false</code>. This attribute may be found on uscode
+or act entities.</li>
+</ol>
+
+<h3 id="notes-on-entity-refs">Notes on <code>entity-refs</code></h3>
+
+<p>The <code>act</code>, <code>uscode</code>, <code>public-law</code>, and <code>statute-at-large</code> entity-types lack
+an <code>@entity-id</code> or <code>@entity-parent-id</code> attribute because:</p>
+
+<ol>
+<li>There is no universally-agreed-upon unique identifier for the entities they
+cite.</li>
+<li>Different <code>@value</code> values may reference the same entity. This is unlike an 
+<code>@entity-id</code>, where every entity has exactly one id.</li>
+</ol>
+
+<h3 id="values-for-catoxml-catoentity-ref-value">Values for CatoXML <code>cato:entity-ref</code> value</h3>
+
+<p>All entity-ref value attributes use a series of slash-delimited
+segments. For example, <code>usc/1/234</code> cites title 1, section 234 of the
+U.S. Code. This is equivalent to "1 U.S.C. 234" in the common citation
+format. The meaning and parsing of individual segments is determined
+by the value of the first segment.</p>
+
+<h4 id="uscode"><code>uscode</code></h4>
+
+<ul>
+<li><p><strong>U.S.C. Section</strong>. Segments are:</p>
+
+<ol>
+<li>Fixed string <code>usc</code></li>
+<li>Title number</li>
+<li>Section number</li>
+<li>Further optional segments are subparts of Section, starting
+with subsection. For example <code>usc/1/2/a/i</code> cites title 1,
+section 2, subsection 3, paragraph a, subparagraph i. It is
+equivalent to "1 U.S.C. 2(a)(i)" in the common citation
+format. The last segment may indicate an inclusive range of
+document parts by using two citation values separated by
+double-periods, e.g. <code>usc/1/2/a..d</code> is equivalent to "1 U.S.C.
+2(a) through 1 U.S.C 2(d)".</li>
+<li>The final segment may contain the special value <code>note</code> or
+<code>etseq</code> to indicate that the citation is to a note to the
+current section (e.g. "1 U.S.C. 2 note") or a reference to
+this and the following sections (e.g. "1 U.S.C. 2 et seq.").
+If there is no special citation this segment is omitted.</li>
+</ol></li>
+<li><p><strong>U.S.C. Chapter</strong>. Segments are:</p>
+
+<ol>
+<li>Fixed string <code>usc-chapter</code></li>
+<li>Title number</li>
+<li>Chapter number</li>
+<li>Subchapter number. If there is no subchapter citation this
+segment is omitted.</li>
+<li>The final segment may contain the special value <code>note</code> or
+<code>etseq</code>, as with U.S.C. Section citations.</li>
+</ol></li>
+<li><p><strong>U.S.C. Appendix</strong>. A citation to an appendix of a title of the U.S.
+Code and optionally to a section, e.g. "1 U.S.C App. 234"</p>
+
+<ol>
+<li>Fixed string <code>usc-appendix</code></li>
+<li>Title number</li>
+<li>Optionally a section number. Since section numbering is not
+always unambiguous in U.S.C. Appendixes, this segment may be
+absent. The common citation format would simply read "1
+U.S.C. App."</li>
+<li>The final segment may contain the special value <code>note</code> or
+<code>etseq</code>, as with U.S.C. Section citations.</li>
+</ol></li>
+</ul>
+
+<h4 id="statute-at-large"><code>statute-at-large</code></h4>
+
+<p>A reference to a page in a volume of the Statutes at Large. The normal
+citation "90 Stat. 2541" would be expressed as <code>statute-at-large/90/2541</code>.
+Segments are:</p>
+
+<ol>
+<li>Fixed string "statute-at-large". (Note for compatibility with
+HouseXML "statute" is singular.)</li>
+<li>Statutes at Large volume number.</li>
+<li>Statutes at Large page number. The page number may be an inclusive
+range if two numbers are joined by a double-period, e.g.
+<code>2541..2543</code> indicates pages 2541 through 2543.</li>
+</ol>
+
+<h4 id="act"><code>act</code></h4>
+
+<p>A reference to an act by its popular name. There is very little
+uniformity among act citations so machine-parsable act citation values
+utilize a system of prefixes to indicate segment types. The normal
+citation "1861(s)(2) of the Social Security Act" would be expressed as
+Social Security <code>Act/s:1861/ss:s/p:2</code>. Segments are:</p>
+
+<ol>
+<li>A popular name for an act taken verbatim from the Office of the
+Law Revision Council’s table of popular names, or from the text
+contained by an HouseXML act-name element in the current document
+that names the current document, or the compact FDsys name of the
+bill with its version suffix (e.g., "113hconres2ih"). The latter
+two values are only used if the reference is to the current bill.
+A single act may have multiple popular names, and no attempt is
+made to establish one unique canonical popular name per act. The
+act name may contain any character except <code>/</code> (forward slash).</li>
+<li><p>Further optional segments are citations reflecting the parts of
+the document explicitly mentioned by the text of the citation:</p>
+
+<ul>
+<li>Segments must be listed in order from broadest document part
+to narrowest document part. (N.B., document part hierarchy
+may vary from act to act.)</li>
+<li>Segment citations consist of a prefix to indicate the segment
+type, a colon, and a value to indicate the letter or number
+of that segment citation. For example, <code>t:I</code> cites "title
+one".</li>
+<li><p>The following prefixes are defined:</p>
+
+<ul>
+<li>division <code>d</code></li>
+<li>title <code>t</code></li>
+<li>subtitle <code>st</code></li>
+<li>part <code>pt</code></li>
+<li>subpart <code>spt</code></li>
+<li>chapter <code>ch</code></li>
+<li>subchapter <code>sch</code></li>
+<li>section <code>s</code></li>
+<li>subsection <code>ss</code></li>
+<li>paragraph <code>p</code></li>
+<li>subparagraph <code>sp</code></li>
+<li>clause <code>cl</code></li>
+<li>subclause <code>scl</code></li>
+<li>item <code>i</code></li>
+<li>subitem <code>si</code></li>
+</ul></li>
+<li><p>The last segment citation value may use a double-period to
+indicate a range. For example, <code>t:I..V</code> indicates title 1
+through title 5. Only the last segment citation value may use
+a range because the citation would be ambiguous otherwise.
+For example, <code>Social Security Act/t:I..V/s:6</code> is ambiguous, as
+it is not clear which section six is indicated.</p></li>
+</ul></li>
+<li><p>The final segment may contain the special value <code>note</code> or <code>etseq</code>,
+as with U.S.C. Section citations.</p></li>
+</ol>
+
+<h4 id="public-law"><code>public-law</code></h4>
+
+<p>A reference to a Public Law. The normal citation "P.L. 111-12" would
+be expressed as <code>public-law/111/12</code>. Segments are:</p>
+
+<ol>
+<li>Fixed string <code>public-law</code></li>
+<li>Congress number</li>
+<li>Law number</li>
+<li>Following the third segment, a public law citation value may use
+part-prefixed segments exactly as described in number 2 in the "acts"
+section above. For example, <code>public-law/111/12/t:I</code> indicates "title I of
+P. L. 111-12".</li>
+</ol>
+
+<h2 id="mapping-housexml-metadata-elements-to-catoxml-metadata-elements">Mapping HouseXML metadata elements to CatoXML metadata elements</h2>
+
+<p>Certain elements in HouseXML can express the same information as a
+CatoXML element. If a HouseXML element is present in a document and
+would express the same information as a CatoXML element, no CatoXML
+element is added. This section defines rules for determining the
+semantically equivalent CatoXML for a HouseXML element.</p>
+
+<table border="1" cellpadding="2">
+ <thead bgcolor="lightgrey">
+  <tr><th>Entity type</th> <th>HouseXML</th> <th>CatoXML</th></tr>
+ </thead>
+ <tbody>
+  <tr>
+   <td>Committee</td>
+   <td><code>&lt;committee-name committee-id="<b>CID</b>"></code></td>
+   <td><code>&lt;cato:entity-ref entity-type="committee" entity-id="<b>CID</b>"></code></td>
+  </tr>
+  <tr>
+   <td>Person</td>
+   <td><code>&lt;sponsor name-id="<b>BIOID</b>"></code></td>
+   <td><code>&lt;cato:entity-ref entity-id="<b>BIOID</b>"></code></td>
+  </tr>
+  <tr>
+   <td>Person</td>
+   <td><code>&lt;cosponsor name-id="<b>BIOID</b>"></code></td>
+   <td><code>&lt;cato:entity-ref entity-id="<b>BIOID</b>"></code></td>
+  </tr>
+  <tr>
+   <td>Act (Popular Name)</td>
+   <td><code>&lt;act-name><b>Name of Act</b>&lt;/act-name></code></td>
+   <td><code>&lt;cato:entity-ref entity-type="act" value="<b>Name of Act</b>">
+    <b>Name of Act</b>&lt;/cato:entity-ref></code>
+    <sup><a href="#note1" id="note1-ref">Note</a></sup></td>
+  </tr>
+  <tr>
+   <td>U.S. Code Section</td>
+   <td><code>&lt;external-xref legal-doc="uscode" parseable-cite="<b>Citation Value</b>"></code></td>
+   <td><code>&lt;cato:entity-ref entity-type="usc" value="<b>Citation Value</b>"></code></td>
+  </tr>
+  <tr>
+   <td>U.S. Code Chapter</td>
+   <td><code>&lt;external-xref legal-doc="usc-chapter" parseable-cite="<b>Citation Value</b>"></code></td>
+   <td><code>&lt;cato:entity-ref entity-type="uscode" value="<b>Citation Value</b>"></code></td>
+  </tr>
+  <tr>
+   <td>U.S. Code Appendix</td>
+   <td><code>&lt;external-xref legal-doc="usc-appendix" parseable-cite="<b>Citation Value</b>"></code></td>
+   <td><code>&lt;cato:entity-ref entity-type="uscode" value="<b>Citation Value</b>"></code></td>
+  </tr>
+  <tr>
+   <td>Public Law</td>
+   <td><code>&lt;external-xref legal-doc="public-law" parseable-cite="<b>Citation Value</b>"></code></td>
+   <td><code>&lt;cato:entity-ref entity-type="public-law" value="<b>Citation Value</b>"></code></td>
+  </tr>
+  <tr>
+   <td>Statutes at Large</td>
+   <td><code>&lt;external-xref legal-doc="statute-at-large" parseable-cite="<b>Citation Value</b>"></code></td>
+   <td><code>&lt;cato:entity-ref entity-type="statute-at-large" value="<b>Citation Value</b>"></code></td>
+  </tr>
+ </tbody>
+</table>
+
+<p><strong id="note1"><a href="#note1-ref">Note:</a></strong><code>act-name</code>'s  <code>@parseable-cite</code>
+is ignored because the vocabulary is unpublished. If it is ever released, its
+value may be used in a <code>cato:entity-ref</code> <code>@entity-id</code> attribute.</p>
+
+<h2 id="entity-lookup-tables">Entity Lookup Tables</h2>
+
+<p>Entity lookup tables are references for entities indexed by entity-id.
+They have the following structure shared by all entity types:</p>
+
+<ol>
+<li><p><code>entities</code> root element.</p>
+
+<ul>
+<li><code>entities</code> has an required <code>@type</code> attribute expressing the
+entity type of all child elements. The value of this
+attribute matches the <code>@entity-type</code> attribute used on
+<code>cato:entity</code> and <code>cato:entity-ref</code> attributes.</li>
+<li><code>entities</code> has a required <code>@updated</code> attribute indicating the
+date and time the entity lookup table was last updated in
+iso8601 format, e.g. <code>2012-12-30T13:30:02</code>.</li>
+<li>entites has an optional attribute <code>@version</code> whose value is
+entity-type specific. This attribute is used to fix a lookup
+table to a specific point in time relevant to a specific set
+of documents. For example, the list of agencies and bureaus
+(federal-body) may vary from year to year as some are added,
+others removed, and bureaus are restructured into different
+agencies. However, these older lists are still relevant, as
+legislation and other documents from those time periods will
+still need to identify them. Thus a <code>@version</code> attribute may be
+included with (for example) a fiscal year or congress number
+to indicate that it lists the state of the world of
+federal-bodies during that period. This is different from a
+lookup table with a newer <code>@updated</code> value: in this case the
+older document should merely be discarded. In other words, a
+lookup table is “updated” when it is corrected or added to,
+but “versioned” when the world changes in a
+backwards-incompatible way but the older lookup table needs
+to be kept for older documents.</li>
+<li>entity-types may define further entity-type-specific
+attributes on this element.</li>
+</ul></li>
+<li><p><code>entity</code> child elements of <code>entities</code> contain information regarding a
+particular entity. They have a basic structure shared by all
+entity types which may be extended by particular entity types.</p>
+
+<ul>
+<li>entity elements have a required <code>@id</code> attribute which indicates
+the id of the entity.</li>
+<li>entity elements may have a <code>@parent-id</code> attribute which refers
+to another entity in the table as its parent. The precise
+semantic meaning of this "parent" relationship varies by
+entity-type. Some entity types do not have parent-child
+relationships among entities.</li>
+<li>entity elements may have one or more <code>name</code> or <code>abbr</code> elements to
+indicate names and abbreviations for the entity. The value of
+this element is contained as text.</li>
+<li><code>name</code> and <code>abbr</code> elements have an optional <code>@role</code> attribute to
+indicate the role of the name. Predefined values are:
+<ul>
+<li><code>official</code> for official names and abbreviations.</li>
+<li><code>historical</code> for older names and abbreviations no longer
+in common use.</li>
+<li>Entity types may define and use other
+entity-type-specific values.</li>
+</ul></li>
+<li><p><strong>Name and abbr sorting order.</strong> The order of preference for an
+entity’s names and abbreviations is determined in this way:</p>
+
+<ol>
+<li>Names and abbreviations with a <code>@role</code> attribute with
+value <code>official</code> rank first. If there are multiple such
+names or abbreviations, they are ranked in document
+order.</li>
+<li>All other names and abbreviations are ranked below the
+official ones in document order.</li>
+</ol></li>
+</ul></li>
+</ol>
+
+<h3 id="entity-type-specific-extensions">Entity-Type specific extensions</h3>
+
+<p>Certain entity types make use of the various extension points provided
+by the lookup table format and described in the previous section. These
+entity-type specific extensions are documented below.</p>
+
+<h4 id="committees-committee-entities">Committees ("committee" entities)</h4>
+
+<p>These committee and subcommittee id values are consistent with those
+found in the <code>@committee-id</code> attribute of the <code>committee-name</code> element of
+<a href="http://xml.house.gov">House XML</a>.</p>
+
+<p>Subcommittees indicate their parent Committee with the <code>@parent-id</code>
+attribute.</p>
+
+<h4 id="people-person-entities">People ("person" entities)</h4>
+
+<p>Person <code>@id</code> values are <a href="http://bioguide.congress.gov">Bioguide ids</a>.</p>
+
+<p>The <code>@version</code> attribute on the <code>entity</code> element indicates a congressional
+session. The lookup table is expected to contain a comprehensive list
+of every congressman who served during that session of congress.</p>
+
+<p>The <code>entity</code> element may have the following additional attributes:</p>
+
+<ul>
+<li><code>@govtrackid</code> to indicate a govtrack id</li>
+<li><code>@title</code>: <code>Rep.</code> to indicate a representative, <code>Sen.</code> to indicate a
+senator, <code>Del.</code> to indicate a delegate.</li>
+<li><code>@state</code> and a two-leter postal state to indicate the state of the
+seat the congressman occupies.</li>
+<li><code>@district</code> to indicate the district number of the seat the
+Representative occupies.</li>
+</ul>
+
+<p>The <code>name</code> element includes a full name of the senator, with title,
+party, and state. E.g.: <code>Rep. Gary Ackerman (D, NY-5)</code>.</p>
+
+<p>The <code>name</code> element may have the following optional attributes:</p>
+
+<ul>
+<li><code>@firstname</code> to indicate the first name of the congressman.</li>
+<li><code>@lastname</code> to indicate the last name of the congressman.</li>
+</ul>
+
+<h4 id="agencies-and-bureaus-federal-body-entities">Agencies and Bureaus (“federal-body” entities)</h4>
+
+<p>The <code>@entity</code> element may have the following additional attributes:</p>
+
+<ul>
+<li><code>@omb-agency</code> a crosswalk to the three-digit Office of Management
+and Budget (OMB) agency code</li>
+<li><code>@omb-bureau</code> a crosswalk to the two-digit OMB bureau code</li>
+<li><code>@treasury-code</code> a crosswalk to the two-digit Treasury Account
+Symbol (TAS) code.</li>
+</ul>
+
+<p>Additionally, the <code>@role</code> attribute of the <code>name</code> element may have the value
+<code>leadership</code>, which indicates that the name is the position of the senior
+director of the named federal body. This role is included because bills often
+direct an agency to do something using language that names the highest
+position in that agency. For example, "The Happiness Czar shall expend $5
+million in fiscal year 2013 to promote happiness abroad". Here, "Happiness
+Czar" would be a <code>&lt;name role="leadership"&gt;</code> entry for the fictional "Bureau
+of Happiness".</p>
+</body></html>
