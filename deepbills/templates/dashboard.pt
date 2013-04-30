@@ -53,7 +53,13 @@ $(function(){$('.column').equalHeight();});
 			<a class="logout_user">Logout</a>
 		</div>
 		<div class="breadcrumbs_container">
-			<article class="breadcrumbs"><a href="/" class="current">Dashboard</a></article>
+			<article class="breadcrumbs">
+				<a href="/" tal:attributes="class python:'current' if bill_type else None">Dashboard</a>
+				<div tal:omit-tag="">
+					<div class="breadcrumb_divider"></div>
+					<a class="current" tal:content="bill_type"></a>
+				</div>
+			</article>
 		</div>
 	</section><!-- end of secondary bar -->
 	

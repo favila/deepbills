@@ -53,7 +53,7 @@ $(function(){$('.column').equalHeight();});
 			<a class="logout_user">Logout</a>
 		</div>
 		<div class="breadcrumbs_container">
-			<article class="breadcrumbs"><a href="/" class="current">Dashboard</a></article>
+			<article class="breadcrumbs"><a class="current" href="/">Dashboard</a></article>
 		</div>
 	</section><!-- end of secondary bar -->
 	

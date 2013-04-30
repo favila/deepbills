@@ -294,9 +294,10 @@ def dashboard(request):
         'page_title': 'Dashboard',
         'site_name': 'DeepBills',
         'rows':'',
+        'bill_type': request.matchdict.get('billtype', None)
     }
-    if 'billtype' in request.matchdict:
-        response['page_title'] += ': '+request.matchdict['billtype']
+    if response['bill_type']:
+        response['page_title'] += ': ' + response['bill_type']
     query = """
     declare namespace cato = "http://namespaces.cato.org/catoxml";
     declare variable $DB as xs:string := xs:string($DBua);
@@ -324,8 +325,8 @@ def dashboard(request):
     </tr>"""
     with sessionfactory() as session:
         with session.query(query) as qr:
-            if 'billtype' in request.matchdict:
-                qr.bind('btype_filter', request.matchdict['billtype'], 'xs:string')
+            if response['bill_type']:
+                qr.bind('btype_filter', response['bill_type'], 'xs:string')
             else:
                 qr.bind('btype_filter', 'false()', 'xs:boolean')
             response['rows'] = qr.execute()
