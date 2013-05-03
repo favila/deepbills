@@ -56,13 +56,12 @@ def bill_resource(request):
     let $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()]
     return db:open($DB, $latestrevision/@doc)/*
     """, ['docid'])
-    with sessionfactory() as session:
-        with session.query(*qlatest) as qr:
-            qr.bind('docid', docid)
-            try:
-                responsexml = qr.execute()
-            except IOError:
-                return HTTPBadRequest()
+    with request.basex.query(*qlatest) as qr:
+        qr.bind('docid', docid)
+        try:
+            responsexml = qr.execute()
+        except IOError:
+            return HTTPBadRequest()
     return Response(BOM_UTF8+responsexml.encode('utf-8'), content_type="application/xml")
 
 @view_config(route_name='bill_create', request_method="POST")
@@ -82,11 +81,10 @@ return if (db:open($DB, $metapath))
         db:output($docid || " created")
     )""",
     ('doc', 'docmeta'))
-    with sessionfactory() as session:
-        with session.query(*qcreate) as q:
-            q.bind('doc', request.POST['doc'].value.decode('utf-8'))
-            q.bind('docmeta', request.POST['docmeta'].value)
-            msg = q.execute()
+    with request.basex.query(*qcreate) as q:
+        q.bind('doc', request.POST['doc'].value.decode('utf-8'))
+        q.bind('docmeta', request.POST['docmeta'].value)
+        msg = q.execute()
     docid, status = msg.split()
     if status == 'exists':
         return HTTPConflict(body=msg+"\n")
@@ -136,18 +134,17 @@ def save_bill_resource(request):
         response['error'] = 'Description and text are required'
         return response
 
-    with sessionfactory() as session:
-        try:
-            with session.query(*qupdate) as q:
-                q.bind('docid', docid)
-                q.bind('commit-time', newbill['commit-time'])
-                q.bind('comitter', newbill['comitter'])
-                q.bind('description', newbill['description'])
-                q.bind('text', newbill['text'])
-                q.execute()
-        except IOError, e:
-            request.response.status_code = 500
-            response['error'] = e.message
+    try:
+        with request.basex.query(*qupdate) as q:
+            q.bind('docid', docid)
+            q.bind('commit-time', newbill['commit-time'])
+            q.bind('comitter', newbill['comitter'])
+            q.bind('description', newbill['description'])
+            q.bind('text', newbill['text'])
+            q.execute()
+    except IOError, e:
+        request.response.status_code = 500
+        response['error'] = e.message
     return response
 
 
@@ -155,10 +152,9 @@ def save_bill_resource(request):
 def vocabulary_lookup(request):
     vocab = 'vocabularies/%s.xml' % request.matchdict['vocabid']
     if not request.query_string:
-        with sessionfactory() as session:
-            with session.query("declare variable $vocab as xs:string external; db:open($DB, $vocab)") as q:
-                q.bind('vocab', vocab)
-                responsexml = q.execute().encode('utf-8')
+        with request.basex.query("declare variable $vocab as xs:string external; db:open($DB, $vocab)") as q:
+            q.bind('vocab', vocab)
+            responsexml = q.execute().encode('utf-8')
         return Response(responsexml, content_type="application/xml; charset=utf-8")
 
 
@@ -192,13 +188,12 @@ def vocabulary_lookup(request):
         </results>
     """, [])
 
-    with sessionfactory() as session:
-        with session.query(*xquery) as q:
-            q.bind('vocab', vocab)
-            q.bind('query', query)
-            #ET.fromstring requires utf-8 string, not unicode
-            element = q.execute().encode('utf-8')
-            xresults = ET.fromstring(element)
+    with request.basex.query(*xquery) as q:
+        q.bind('vocab', vocab)
+        q.bind('query', query)
+        #ET.fromstring requires utf-8 string, not unicode
+        element = q.execute().encode('utf-8')
+        xresults = ET.fromstring(element)
 
     aresults = [xml_to_map(e) for e in xresults.iter('e')]
 
@@ -232,12 +227,11 @@ def entity_lookup(request):
                 </e>
             else <e/>
         """,[])
-    with sessionfactory() as session:
-        with session.query(*xquery) as q:
-            q.bind('vocab', vocab)
-            q.bind('entityid', entityid)
-            res = q.execute()
-            xresults = ET.fromstring(res)
+    with request.basex.query(*xquery) as q:
+        q.bind('vocab', vocab)
+        q.bind('entityid', entityid)
+        res = q.execute()
+        xresults = ET.fromstring(res)
     response = xml_to_map(xresults)
     if not response:
         raise HTTPNotFound
@@ -267,13 +261,12 @@ def query(request):
     response['query'] = request.GET.get('query', '')
     
     if response['query']:
-        with sessionfactory() as session:
-            try:
-                with session.query(response['query']) as qr:
-                    for typecode, item in qr.iter():
-                        response['result'].append(item)
-            except IOError, e:
-                response['error'] = e.message
+        try:
+            with request.basex.query(response['query']) as qr:
+                for typecode, item in qr.iter():
+                    response['result'].append(item)
+        except IOError, e:
+            response['error'] = e.message
 
     response['result'] = "\n".join(response['result'])
     return response
@@ -309,9 +302,8 @@ def dashboard(request):
         <td><a href="/bills/{$i}/edit">raw edit</a></td>
         <td><a target="_blank" href="/Editor/Index.html?doc={$i}">edit</a></td>
     </tr>"""
-    with sessionfactory() as session:
-        with session.query(query) as qr:
-            response['rows'] = qr.execute()
+    with request.basex.query(query) as qr:
+        response['rows'] = qr.execute()
 
     return response
 
@@ -342,23 +334,22 @@ def bill_view(request):
             $latestdoc
         )
     """, ['docid'])
-    with sessionfactory() as session:
-        try:
-            with session.query(*qrevision) as qr:
-                qr.bind('docid', docid)
-                qresponse = [v for t, v in qr.iter()]
-                if not qresponse:
-                    raise HTTPNotFound
-                response['bill']['name'] = qresponse[0]
-                response['bill']['revision'] = qresponse[1]
-                response['bill']['metadata']['commit-time'] = qresponse[2]
-                response['bill']['metadata']['committer'] = qresponse[3]
-                response['bill']['metadata']['description'] = qresponse[4]
-                response['bill']['metadata']['status'] = qresponse[5]
-                response['bill']['text'] = qresponse[6]
+    try:
+        with request.basex.query(*qrevision) as qr:
+            qr.bind('docid', docid)
+            qresponse = [v for t, v in qr.iter()]
+            if not qresponse:
+                raise HTTPNotFound
+            response['bill']['name'] = qresponse[0]
+            response['bill']['revision'] = qresponse[1]
+            response['bill']['metadata']['commit-time'] = qresponse[2]
+            response['bill']['metadata']['committer'] = qresponse[3]
+            response['bill']['metadata']['description'] = qresponse[4]
+            response['bill']['metadata']['status'] = qresponse[5]
+            response['bill']['text'] = qresponse[6]
 
-        except IOError, e:
-            response['error'] = e.message
+    except IOError, e:
+        response['error'] = e.message
     
     return response
 
@@ -405,16 +396,15 @@ def bill_edit(request):
     """, 'docid commit-time comitter status description text'.split())
     
     def addbilldata(docid, response):
-        with sessionfactory() as session:
-            try:
-                with session.query(*qget) as qr:
-                    qr.bind('docid', docid)
-                    qresponse = [v for t, v in qr.iter()]
-                    response['bill']['text'] = qresponse[0]
-                    response['bill']['status'] = qresponse[1]
-                    response['bill']['revision'] = qresponse[2]
-            except IOError, e:
-                response['error'] = e.message
+        try:
+            with request.basex.query(*qget) as qr:
+                qr.bind('docid', docid)
+                qresponse = [v for t, v in qr.iter()]
+                response['bill']['text'] = qresponse[0]
+                response['bill']['status'] = qresponse[1]
+                response['bill']['revision'] = qresponse[2]
+        except IOError, e:
+            response['error'] = e.message
 
     if request.method == 'GET':
         addbilldata(docid, response)
@@ -436,19 +426,18 @@ def bill_edit(request):
             response['error'] = 'Text and status are required'
             return response
 
-        with sessionfactory() as session:
-            try:
-                with session.query(*qupdate) as q:
-                    q.bind('docid', docid)
-                    q.bind('commit-time', newbill['commit-time'])
-                    q.bind('comitter', newbill['comitter'])
-                    q.bind('status', newbill['status'])
-                    q.bind('description', newbill['description'])
-                    q.bind('text', newbill['text'])
-                    q.execute()
-                    return HTTPSeeOther(location="/bills/{}/view".format(docid))
-            except IOError, e:
-                response['error'] = e.message
+        try:
+            with request.basex.query(*qupdate) as q:
+                q.bind('docid', docid)
+                q.bind('commit-time', newbill['commit-time'])
+                q.bind('comitter', newbill['comitter'])
+                q.bind('status', newbill['status'])
+                q.bind('description', newbill['description'])
+                q.bind('text', newbill['text'])
+                q.execute()
+                return HTTPSeeOther(location="/bills/{}/view".format(docid))
+        except IOError, e:
+            response['error'] = e.message
 
     return response
 
@@ -507,18 +496,17 @@ metadata is available at http://namespaces.cato.org/catoxml
     )"""
 
     filedates = set()
-    with sessionfactory() as session:
-        zfp = StringIO()
-        with session.query(xquery, []) as q, ZipFile(zfp, 'w', ZIP_DEFLATED) as zf:
-            for (_, filename), (_, isotime), (_, xml) in izip(*[iter(q.iter())]*3):
-                filemod = parsetime(isotime)
-                filedates.add(filemod)
-                zinfo = ZipInfo(filename, filemod.timetuple())
-                zf.writestr(zinfo, xml.encode('utf-8'), ZIP_DEFLATED)
+    zfp = StringIO()
+    with request.basex.query(xquery, []) as q, ZipFile(zfp, 'w', ZIP_DEFLATED) as zf:
+        for (_, filename), (_, isotime), (_, xml) in izip(*[iter(q.iter())]*3):
+            filemod = parsetime(isotime)
+            filedates.add(filemod)
+            zinfo = ZipInfo(filename, filemod.timetuple())
+            zf.writestr(zinfo, xml.encode('utf-8'), ZIP_DEFLATED)
 
-            lastmod = max(filedates)
-            readme_zinfo = ZipInfo('README.txt', lastmod.timetuple())
-            zf.writestr(readme_zinfo, README.format(lastmod=lastmod.isoformat()))
+        lastmod = max(filedates)
+        readme_zinfo = ZipInfo('README.txt', lastmod.timetuple())
+        zf.writestr(readme_zinfo, README.format(lastmod=lastmod.isoformat()))
 
     zfplen = zfp.tell()
     zfp.seek(0)
