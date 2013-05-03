@@ -77,9 +77,32 @@ def escapebinding(name, value):
         binding = "$%s=%s" % (localname, value.replace(',',',,'))
     return binding
 
+def sessionfactory(host, port, user, pass_):
+    session = Session(host, port, user, pass_)
+    defaultbindings = {
+        'DBua': 'deepbills'
+    }
+    session.execute('SET BINDINGS '+ escapebindings(defaultbindings))
+    return session
 
+def basexsession_tween_factory(handler, registry):
+    basexsettings = registry.settings.get('basex.connection_settings')
+    if basexsettings:
+        basexsettings = basexsettings.split(', ')
+        basexsettings[1] = int(basexsettings[1])
+        basexsettings = tuple(basexsettings)
+    else:
+        return handler
+    requestproperty = registry.settings.get('basex.request_property', 'basex')
+    def _basexconnect(request):
+        session = sessionfactory(*basexsettings)
+        request.add_finished_callback(lambda request: getattr(request, requestproperty).close())
+        return session
 
-
+    def basexsession_tween(request):
+        request.set_property(_basexconnect, requestproperty, reify=True)
+        return handler(request)
+    return basexsession_tween
 
 
     
