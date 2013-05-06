@@ -1,10 +1,13 @@
 # coding: utf-8
-from pyramid.view import view_config
+from pyramid.view import view_config, view_defaults
 from pyramid.response import Response
-from pyramid.httpexceptions import HTTPTemporaryRedirect, HTTPSeeOther, HTTPBadRequest, HTTPNotFound, HTTPCreated, HTTPConflict, HTTPInternalServerError
+from pyramid.security import forget
+from pyramid.httpexceptions import (HTTPTemporaryRedirect, 
+    HTTPSeeOther, HTTPBadRequest, HTTPNotFound, HTTPCreated, 
+    HTTPConflict, HTTPInternalServerError, HTTPForbidden, HTTPUnauthorized)
 from pyramid.url import route_url
 
-import models.BaseXClient2 as BaseXClient
+from models import deepbills
 
 from xml.etree import cElementTree as ET
 
@@ -40,13 +43,62 @@ def now_isoformat():
     return now().isoformat()
 
 
-def sessionfactory():
-    session = BaseXClient.Session('localhost', 1984, 'admin', 'admin')
-    defaultbindings = {
-        'DBua': 'deepbills'
-    }
-    session.execute('SET BINDINGS '+ BaseXClient.escapebindings(defaultbindings))
-    return session
+def xml_to_map(root):
+    mapping = {}
+    for aname, aval in root.attrib.iteritems():
+        mapping[aname] = aval
+    for child in root:
+        mapping[child.tag] = xml_to_map(child)
+    if not mapping:
+        return None
+    return mapping
+
+
+@view_config(context=HTTPForbidden)
+def auth_basic_challenge(request):
+    """View to issue a challenge for auth-basic credentials when none are provided"""
+    response = HTTPForbidden
+    response.headers.update(forget(request))
+    return response
+
+
+@view_defaults(route_name='vocabulary_lookup', http_cache=3600)
+class Lookup(object):
+    "Vocabulary lookups"
+    def __init__(self, request):
+        self.request = request
+        self.vocabid = request.matchdict['vocabid']
+        self.vocab = deepbills.Vocabulary(request.basex, self.vocabid)
+
+    @view_config(renderer='string')
+    def all(self):
+        vocabxml = self.vocab.body()
+        if vocabxml is None:
+            raise HTTPNotFound
+        self.request.response.content_type = 'application/xml'
+        return vocabxml
+
+    @view_config(request_param='q', renderer='json')
+    def search(self):
+        searchterm = self.request.GET.get('q')
+        foundxml = self.vocab.search(searchterm)
+        if foundxml is None:
+            raise HTTPNotFound
+        xresults = ET.fromstring(foundxml)
+        aresults = [xml_to_map(e) for e in xresults.iter('e')]
+        return aresults
+
+    @view_config(route_name="entity_lookup", renderer="json")
+    def one(self):
+        entityid = self.request.matchdict['entityid']
+        xmlentity = self.vocab.entity(entityid)
+        if xmlentity is None:
+            raise HTTPNotFound
+        response = xml_to_map(ET.fromstring(xmlentity))
+        if not response:
+            raise HTTPNotFound
+        return response
+
 
 @view_config(route_name='bill_resource', renderer='string', request_method="GET")
 def bill_resource(request):
@@ -146,107 +198,6 @@ def save_bill_resource(request):
         request.response.status_code = 500
         response['error'] = e.message
     return response
-
-
-@view_config(route_name='vocabulary_lookup', renderer='json', http_cache=3600)
-def vocabulary_lookup(request):
-    vocab = 'vocabularies/%s.xml' % request.matchdict['vocabid']
-    if not request.query_string:
-        with request.basex.query("declare variable $vocab as xs:string external; db:open($DB, $vocab)") as q:
-            q.bind('vocab', vocab)
-            responsexml = q.execute().encode('utf-8')
-        return Response(responsexml, content_type="application/xml; charset=utf-8")
-
-
-    query = request.GET.get('q')
-    xquery = ("""
-        import module namespace functx = "http://www.functx.com";
-        declare variable $DB as xs:string := xs:string($DBua);
-        declare variable $vocab as xs:string external;
-        declare variable $query as xs:string external;
-        declare function local:extract-entity-name-id-attr($entity as element()*) as node()* {
-            if ($entity) then 
-                (attribute {"id"} { $entity/@id },
-                attribute {"name"} {
-                    ($entity/name[@current="true" or position()=1]
-                    | $entity/abbr[1])[1]
-                })
-            else ()
-        };
-        <results vocabulary="{$vocab}" query="{$query}">
-        {
-            for $entity in functx:distinct-nodes(
-                db:open($DB, $vocab)/*/*[
-                    */text() contains text {$query} using stemming using language "en" using fuzzy
-                ]
-            )
-            let $parentid := xs:string($entity/@parent-id)
-            return <e>{local:extract-entity-name-id-attr($entity)}
-                   <parent>{local:extract-entity-name-id-attr($entity/../*[@id eq $parentid])}</parent>
-                </e>
-        }
-        </results>
-    """, [])
-
-    with request.basex.query(*xquery) as q:
-        q.bind('vocab', vocab)
-        q.bind('query', query)
-        #ET.fromstring requires utf-8 string, not unicode
-        element = q.execute().encode('utf-8')
-        xresults = ET.fromstring(element)
-
-    aresults = [xml_to_map(e) for e in xresults.iter('e')]
-
-    return aresults
-
-
-@view_config(route_name="entity_lookup", renderer="json", http_cache=3600)
-def entity_lookup(request):
-    vocab = 'vocabularies/%s.xml' % request.matchdict['vocabid']
-    entityid = request.matchdict['entityid']
-    xquery = ("""
-        declare variable $DB as xs:string := xs:string($DBua);
-        declare variable $vocab as xs:string external;
-        declare variable $entityid as xs:string external;
-        declare function local:extract-entity-name-id-attr($entity as element()*) as node()* {
-            if ($entity) then 
-                (attribute {"id"} { $entity/@id },
-                attribute {"name"} {
-                    ($entity/name[@current="true" or position()=1]
-                    | $entity/abbr[1])[1]
-                })
-            else ()
-        };
-        let $DB := xs:string($DB)
-        let $entity := db:open($DB, $vocab)/*/*[@id eq $entityid],
-            $parentid := xs:string($entity/@parent-id)
-        return 
-            if ($entity) then 
-                <e>{local:extract-entity-name-id-attr($entity)}
-                   <parent>{local:extract-entity-name-id-attr($entity/../*[@id eq $parentid])}</parent>
-                </e>
-            else <e/>
-        """,[])
-    with request.basex.query(*xquery) as q:
-        q.bind('vocab', vocab)
-        q.bind('entityid', entityid)
-        res = q.execute()
-        xresults = ET.fromstring(res)
-    response = xml_to_map(xresults)
-    if not response:
-        raise HTTPNotFound
-    return response
-
-
-def xml_to_map(root):
-    mapping = {}
-    for aname, aval in root.attrib.iteritems():
-        mapping[aname] = aval
-    for child in root:
-        mapping[child.tag] = xml_to_map(child)
-    if not mapping:
-        return None
-    return mapping
 
 
 @view_config(route_name='query', renderer='templates/query.pt')
