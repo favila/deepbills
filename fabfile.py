@@ -46,7 +46,8 @@ def deploy_reload():
 
     Only absolutely necessary after an nginx config change or a deploy_deepbills
     """
-    uwsgi_service('reload')
+    uwsgi_service('stop')
+    uwsgi_service('start')
 
 def uwsgi_service(cmd):
     """Issue cmd to the uwsgi service
