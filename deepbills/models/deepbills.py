@@ -34,7 +34,6 @@ return $doc""" % xqe(self.docid)
             try:
                 responsexml = q.execute()
             except IOError, e:
-                print e
                 responsexml = None
         return responsexml
 

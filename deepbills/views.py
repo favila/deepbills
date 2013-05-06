@@ -384,7 +384,6 @@ def bill_edit(request):
             'text': request.POST.get('text', '').strip(),
             'status': request.POST.get('status', '').strip(),
         }
-        print newbill
         response['bill']['status'] = newbill['status']
         response['bill']['description'] = newbill['description']
         response['bill']['text'] = newbill['text']
