@@ -104,5 +104,6 @@ def basexsession_tween_factory(handler, registry):
         return handler(request)
     return basexsession_tween
 
-
-    
+def xquery_escape(s):
+    "Return a string escaped for literal inclusion in an xquery"
+    return s.replace(u'"', u'&quot;').replace(u"'", u'&apos;')
