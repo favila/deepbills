@@ -33,9 +33,9 @@ def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
     config = Configurator(settings=settings)
-    config.add_route('bill_types', '/')
-    config.add_route('dashboard_all', '/dashboard' )
-    config.add_route('dashboard', '/dashboard/{billtype}')
+    # make request.basex available
+    config.add_tween('deepbills.models.BaseXClient2.basexsession_tween_factory')
+    config.add_route('dashboard', '/')
     config.add_route('query', '/query')
     config.add_route('bill_create', '/bills/*/create')
     config.add_route('bill_view', '/bills/{docid}/view')
