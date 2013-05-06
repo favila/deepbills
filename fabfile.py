@@ -2,92 +2,98 @@
 
 from fabric.api import *
 
-env.hosts = ['deepbills.dancingmammoth.com']
+env.forward_agent = True # this is for remote `git pull` commands
+env.hosts = ['deepbills.cato.org']
 env.user = 'favila'
-env.gitrepo = 'https://github.com/favila/deepbills.git'
+env.gitrepo = 'git@dancingmammoth.beanstalkapp.com:/deepbills.git'
 env.editordir = '../AKN/Editor'
 env.vocabfiles = ['acts.xml', 'billversions.xml', 'committees.xml', 'federal-bodies.xml', 'people.xml']
-
-
-def push_and_deploy():
-    push_deepbills()
-    deploy()
-
+env.basexclientcmd = 'basexclient -Uadmin -Padmin'
 
 def deploy():
-    deploy_virtualenv()
+    "Deploy everything; same as 'deploy_virtualenv deploy_deepbills deploy_editor deploy_reload'"
     deploy_deepbills()
     deploy_editor()
-    restart_servers()
+    deploy_reload()
 
 
 def push_deepbills():
-    local('git push beanstalk')
-
-
-def deploy_virtualenv():
-    #set up the virtualenv
-    run('if [ ! -d env ]; then virtualenv env; fi')
+    "Push local master to origin, in preparation for a 'git pull' on production"
+    local('git push origin master')
 
 
 def deploy_deepbills():
-    # upload requirements.txt and install everything
+    """Update code and virtualenv on production"""
     run('if [ ! -d deepbills ]; then git clone %(gitrepo)s; fi' % env)
+    run("if [ ! -d env ]; then virtualenv env --prompt='(deepbills)'; fi")
+    run("if [ ! -d virtualenv-install-cache ]; then mkdir virtualenv-install-cache; fi")
     with cd('deepbills'):
-        run('git pull')
-        run('source ../env/bin/activate && pip install -r requirements.txt && python setup.py develop')
+        run('git pull origin master')
+        run('source ../env/bin/activate && pip install -r requirements.txt --download-cache=~/virtualenv-install-cache')
 
 
 def deploy_editor():
-    #rsync editor files, make symlink
-    #Only copy HouseXML, Editor, BCN, AkomaNtoso
-    local("rsync -arz -e 'ssh -c arcfour' --exclude='.*' --exclude='.git/' %(editordir)s -- %(user)s@%(host)s:" % env)
+    """Rsync editor files to production
+
+    Nginx (or web server) needs to know 
+    """
+    local("rsync -az -e 'ssh -c arcfour' --exclude='.*' --exclude='.git/' --delete-after --delete-excluded %(editordir)s -- %(user)s@%(host)s:" % env)
 
 
-def restart_servers():
-    with settings(warn_only=True):
-        wsgi_stop()
-        basex_stop()
-        with settings(user='root'):
-            nginx_stop()
-    wsgi_start()
-    basex_start()
-    with settings(user='root'):
-        nginx_start()
+def deploy_reload():
+    """Reloads servers to pick up new code.
+
+    Only absolutely necessary after an nginx config change or a deploy_deepbills
+    """
+    uwsgi_service('reload')
+
+def uwsgi_service(cmd):
+    """Issue cmd to the uwsgi service
+
+    Commands are passed unchanged to the underlying `service uwsgi` shell command
+    Important ones are: start, stop, reload
+
+    User that is logged in (env.user) should have an sudoers line like so:
+
+    env.user  ALL = (root) NOPASSWD: /usr/sbin/service nginx *, /usr/sbin/service uwsgi *
+    """
+    # shell is false so user doesn't need ability to run a shell as root!
+    sudo('service uwsgi {} deepbills'.format(cmd), shell=False)
 
 
-def wsgi_stop():
-    with cd('deepbills'):
-        run('source ../env/bin/activate && pserve --stop-daemon development.ini')
+def nginx_service(cmd):
+    """Issue cmd to the nginx service
+
+    Commands are passed unchanged to the underlying `service nginx` shell command
+    Important ones are: start, stop, reload
+
+    User that is logged in (env.user) should have an sudoers line like so:
+
+    env.user  ALL = (root) NOPASSWD: /usr/sbin/service nginx *, /usr/sbin/service uwsgi *
+    """
+    # shell is false so user doesn't need ability to run a shell as root!
+    sudo('service nginx {}'.format(cmd), shell=False)
 
 
-def nginx_stop():
-    run('service nginx stop')
+def basex_service(cmd):
+    """Start or stop the underlying basex database
 
-
-def basex_stop():
-    run('basexserver stop')
-
-
-def basex_start():
-    run('nohup basexserver -S')
-
-
-def nginx_start():
-    run('service nginx start')
-
-
-def wsgi_start():
-    with cd('deepbills'):
-        run('source ../env/bin/activate && pserve --daemon development.ini')
+    cmds may be 'start' or 'stop'
+    """
+    shellcmds = {
+        'start': 'nohup basexserver -S',
+        'stop':  'basexserver stop',
+    }
+    run(shellcmds[cmd])
 
 
 def backup_live_db():
-    run('basexclient -Uadmin -Padmin -c"CREATE BACKUP deepbills"')
+    "Create a backup of the live DB; does not download!"
+    run('{env.basexclientcmd} -c"CREATE BACKUP deepbills"'.format(env=env))
 
 
 def download_latest_backup():
-    """Download the most recent backup on live"""
+    "Download the most recent backup on live; does not create new backup!"
     output = run('dir BaseXData/deepbills-* | sort -r | head -1').stdout
     latestfile = output.strip()
 
@@ -96,29 +102,34 @@ def download_latest_backup():
 
 
 def restore_local():
-    local('basexclient -Uadmin -Padmin -c"RESTORE deepbills"')
-    local('basexclient -Uadmin -Padmin -c"OPEN deepbills; OPTIMIZE; CLOSE"')
+    "Restore the most recent db backup locally available"
+    local('{env.basexclientcmd} -c"RESTORE deepbills; OPEN deepbills; OPTIMIZE; CLOSE"'.format(env=env))
 
 
 def sync_db_to_local():
+    """Copy remote db to local db.
+
+    Same as backup_live_db download_latest_backup restore_local
+    """
     backup_live_db()
     download_latest_backup()
     restore_local()
 
 
 def new_bills_and_automarkup():
+    "Pull down and add new bills, sync to remote, add to remote db, and create automarkup."
     backup_live_db()
     with lcd('../fdsysScraper/data'):
         local('make')
     with cd('data'):
         run('./add_new_bills.sh')
-    run('basexclient -Uadmin -Padmin create-auto-markup-docs.bxs')
+    run('{env.basexclientcmd} create-auto-markup-docs.bxs'.format(env=env))
 
 
 def update_vocabularies():
+    "Update the vocabulary datafiles"
     remotefiledir = '/home/favila/data/deepbills/vocabularies'
-    # remotefiledir = '/Users/favila/Documents/workingcopies/deepBills/fdsysScraper/data/templates/vocabularies'
     replacecmd = 'REPLACE vocabularies/{0} {1}/{0}'
     replacecmds = '; '.join(replacecmd.format(fn, remotefiledir) for fn in env.vocabfiles)
-    fullcmd = 'basexclient -Uadmin -Padmin -c"OPEN deepbills; SET CHOP true; {}; OPTIMIZE; CLOSE"'
-    run(fullcmd.format(replacecmds))
+    fullcmd = '{env.basexclientcmd} -c"OPEN deepbills; SET CHOP true; {replacecmds}; OPTIMIZE; CLOSE"'
+    run(fullcmd.format(replacecmds=replacecmds, env=env))
