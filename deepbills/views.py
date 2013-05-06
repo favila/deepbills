@@ -100,21 +100,20 @@ class Lookup(object):
         return response
 
 
-@view_config(route_name='bill_resource', renderer='string', request_method="GET")
-def bill_resource(request):
-    docid = request.matchdict['docid']
-    qlatest = ("""
-    declare variable $DB as xs:string := xs:string($DBua);
-    let $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()]
-    return db:open($DB, $latestrevision/@doc)/*
-    """, ['docid'])
-    with request.basex.query(*qlatest) as qr:
-        qr.bind('docid', docid)
-        try:
-            responsexml = qr.execute()
-        except IOError:
-            return HTTPBadRequest()
-    return Response(BOM_UTF8+responsexml.encode('utf-8'), content_type="application/xml")
+class Bill(object):
+    def __init__(self, request):
+        self.request = request
+        self.docid = self.request.matchdict.get('docid', None)
+        self.doc = deepbills.Doc(self.request.basex, self.docid)
+
+
+    @view_config(route_name='bill_resource', renderer='string', request_method="GET")
+    def get(self):
+        responsexml = self.doc.body()
+        if responsexml is None:
+            raise HTTPNotFound
+        return Response(responsexml.encode('utf-8'), content_type="application/xml")
+
 
 @view_config(route_name='bill_create', request_method="POST")
 def create_bill_resource(request):
