@@ -25,10 +25,11 @@ def push_deepbills():
 def deploy_deepbills():
     """Update code and virtualenv on production"""
     run('if [ ! -d deepbills ]; then git clone %(gitrepo)s; fi' % env)
+    with cd('deepbills'):
+        run('git pull origin master')
     run("if [ ! -d env ]; then virtualenv env --prompt='(deepbills)'; fi")
     run("if [ ! -d virtualenv-install-cache ]; then mkdir virtualenv-install-cache; fi")
     with cd('deepbills'):
-        run('git pull origin master')
         run('source ../env/bin/activate && pip install -r requirements.txt --download-cache=~/virtualenv-install-cache')
 
 
