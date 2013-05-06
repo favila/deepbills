@@ -402,9 +402,25 @@ def bill_edit(request):
                 q.bind('description', newbill['description'])
                 q.bind('text', newbill['text'])
                 q.execute()
-                return HTTPSeeOther(location="/bills/{}/view".format(docid))
         except IOError, e:
             response['error'] = e.message
+
+        action = request.POST.get('action')
+        nextlocation = location="/bills/{}/view".format(docid)
+        if action == 'Save and Edit Next':
+            nextnewbill = """\
+xs:string((for $d in db:open('deepbills', 'docmetas/')/docmeta
+    return $d[revisions/revision[last()][@status='new']]/@id)[1])"""
+            with request.basex.query(nextnewbill) as q:
+                newbillid = q.execute()
+            print newbillid
+            if newbillid:
+                nextlocation = '/Editor/Index.html?doc={}'.format(newbillid)
+        elif action == 'Save and Return':
+            import re
+            doctype = re.match(r'\d+([a-z]+)', docid).group(1)
+            nextlocation = '/dashboard/{}'.format(doctype)
+        return HTTPSeeOther(nextlocation)
 
     return response
 
