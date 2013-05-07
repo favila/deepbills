@@ -100,6 +100,7 @@ $(function(){$('.column').equalHeight();});
 				</fieldset>
 				<fieldset>
 					<div class="submit_link">
+						<a tal:attributes="href string: /Editor/Index.html?doc=${bill.name}">Open in Editor</a>
 						<input type="submit" name="action" class="alt_btn" value="Save" />
 						<input type="submit" name="action" class="btn" value="Save and Edit Next" />
 						<input type="submit" name="action" class="btn" value="Save and Return" />
