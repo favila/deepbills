@@ -23,7 +23,7 @@ class Session(BaseXClient.Session):
             querytxt = declare_external(boundnames)+"\n"+querytxt
         return Query(self, querytxt, boundnames)
 
-    def get_document(*path):
+    def get_document(self, *path):
         """Return the full XML of a document at the given path (without '.xml' extension)
 
         Path can be a string or a two-item sequence. If a sequence, first item is the
@@ -44,7 +44,7 @@ class Session(BaseXClient.Session):
         except IOError:
             raise KeyError(path.join('/'))
 
-    def document_exists(*path):
+    def document_exists(self, *path):
         "Returns True if a document exists at path; raises KeyError otherwise"
         if len(path) == 1:
             path = path.lstrip('/').split('/', 1)
