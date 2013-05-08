@@ -202,6 +202,33 @@ class Bill(BaseXResource):
             self._docs[None] = doc
         return doc
 
+    def next(self):
+        "Return the next bill in line with a 'new' status"
+        query = """\
+(
+    (
+        for $docmeta in db:open('deepbills', 'docmetas/')/docmeta
+        let $bill := $docmeta/bill,
+            $maxrevision := max($docmeta/revisions/revision/@id),
+            $rev := $docmeta/revisions/revision[@id = $maxrevision],
+            $billnum := xs:integer($bill/@number)
+        where $bill/@type = $thisbilltype and $rev/@status = 'new'
+            and $billnum > $thisbillnum
+        order by xs:integer($bill/@number)
+        return xs:string($docmeta/@id)
+    )[1],
+    xs:string(
+     (db:open('deepbills', 'docmetas/')
+        /docmeta[bill/@type!=$thisbilltype]
+        [revisions/revision[@id=max(@id)]/@status='new']
+        /@id)[1])
+)[1]"""
+        with self.db.query(query) as q:
+            q.bind('thisbilltype', self.meta.find('bill').get('type'), 'xs:string')
+            q.bind('thisbillnum', self.meta.find('bill').get('number'), 'xs:integer')
+            nextid = q.execute()
+        return nextid
+
     def save(self, committer, time, status=None, description=None, text=None):
         """Save a new revision of this document
 
