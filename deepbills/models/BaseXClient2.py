@@ -23,6 +23,47 @@ class Session(BaseXClient.Session):
             querytxt = declare_external(boundnames)+"\n"+querytxt
         return Query(self, querytxt, boundnames)
 
+    def get_document(*path):
+        """Return the full XML of a document at the given path (without '.xml' extension)
+
+        Path can be a string or a two-item sequence. If a sequence, first item is the
+        database name.
+        Same as XQuery "doc('PATH.xml')", but as efficient as possible.
+        Returns None if not found or more than one match found.
+        """
+        if len(path) == 1:
+            path = path.lstrip('/').split('/', 1)
+        else:
+            path = [p.lstrip('/') for p in path]
+
+        xe_db, xe_rest = map(xquery_escape, path)
+
+        cmd = "XQUERY exactly-one(db:open('{}', '{}.xml'))".format(xe_db, xe_rest)
+        try:
+            return self.execute(cmd)
+        except IOError:
+            raise KeyError(path.join('/'))
+
+    def document_exists(*path):
+        "Returns True if a document exists at path; raises KeyError otherwise"
+        if len(path) == 1:
+            path = path.lstrip('/').split('/', 1)
+        else:
+            path = [p.lstrip('/') for p in path]
+
+        xe_db, xe_rest = map(xquery_escape, path)
+
+        # although there is an else clause, it won't be reached if doc does not exist
+        cmd = "XQUERY if (exactly-one(db:open('{}', '{}.xml'))) then 1 else ()".format(xe_db, xe_rest)
+        try:
+            self.execute(cmd)
+        except IOError:
+            raise KeyError(path.join('/'))
+        else:
+            return True
+
+
+
 class Query(BaseXClient.Query):
     def __init__(self, session, querytxt, binds=None):
         BaseXClient.Query.__init__(self, session, querytxt)
