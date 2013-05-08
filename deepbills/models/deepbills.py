@@ -375,13 +375,8 @@ class Locks(BaseXResource):
     "Lists of currently-held locks"
     def __init__(self, db):
         super(Locks, self).__init__(db)
-        self._locklist = None
-        self.release_timedout()
 
     def __call__(self):
-        if self._locklist is not None:
-            return self._locklist
-
         query = """\
 element locks {
 for $lock in db:open('deepbills', 'docmetas/')/docmeta/lock
@@ -393,8 +388,10 @@ return copy $l := $lock
     return $l
 }"""
         with self.db.query(query) as q:
-            self._locklist = ET.fromstring(q.execute())
-        return self._locklist
+            return ET.fromstring(q.execute())
+
+    def asmap(self):
+        return xml_to_map(self(), ['locks'])
 
     def __getitem__(self, docid):
         return located(Lock(self.db, docid), docid, self)
