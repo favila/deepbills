@@ -59,7 +59,7 @@ class BaseXResource(object):
         self.db = db
 
 
-class Bills(BaseXResource):
+class BillList(BaseXResource):
     """Produce space-efficient lists of bill items, optionally filtered by bill type"""
     __acl__ = [
         (Allow, ('group:editor', 'group:admin'), 'view'),
@@ -70,13 +70,13 @@ class Bills(BaseXResource):
     billtypes = ['hr', 'hres', 'hconres', 'hjres', 's', 'sres', 'sconres', 'sjres']
 
     def __init__(self, db, billtype=None):
-        super(Bills, self).__init__(db)
+        super(BillList, self).__init__(db)
         self.billtype = billtype if billtype in self.billtypes else None
 
     def __getitem__(self, billtype):
         if self.billtype is not None or billtype not in self.billtypes:
             raise KeyError
-        return located(Bills(self.db, billtype), billtype, self)
+        return located(BillList(self.db, billtype), billtype, self)
 
     def __call__(self):
         query = """\
@@ -109,6 +109,10 @@ return <tr>
             else:
                 q.bind('btype_filter', 'false()', 'xs:boolean')
             return q.execute()
+
+class Bills(BaseXResource):
+    def __getitem__(self, docid):
+        return located(Bill(self.db, docid), docid, self)
 
     def create(self, docmeta, doc):
         """Create a new bill from docmeta and doc (both xml strings)"""
@@ -185,14 +189,14 @@ class Bill(BaseXResource):
             return doc
 
         revinfo = self.rev(rev)
-        doc = self.db.get_document('deepbills', revinfo.get('doc'))
+        docname_no_extension = revinfo.get('doc').rsplit('.', 1)[0]
+        doc = self.db.get_document('deepbills', docname_no_extension)
 
         self._docs[int(revinfo.get('id'))] = doc
 
         # If this is latest rev, cache it with None key
         if rev is None or (None not in self._docs and rev == max(self._revisions.keys())):
             self._docs[None] = doc
-
         return doc
 
     def save(self, committer, time, status=None, description=None, text=None):

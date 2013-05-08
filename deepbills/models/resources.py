@@ -90,8 +90,8 @@ class ResourceWrapper(object):
 
 def approot(request):
     root = {
-        'dashboard':    db.Bills,
-        'download':     db.Bills,
+        'dashboard':    db.BillList,
+        # 'download':     db.BillList,
         'bills':        db.Bills,
         'vocabularies': db.Vocabularies,
         'users':        db.Users,
