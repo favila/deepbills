@@ -381,7 +381,7 @@ class User(BaseXResource):
     def user_with_pass(db, userid, passwd):
         """Return valid user or None"""
         try:
-            user.User(db, userid)
+            user = User(db, userid)
         except KeyError:
             return None
         if not pwd_context.verify(passwd, user('password')):
