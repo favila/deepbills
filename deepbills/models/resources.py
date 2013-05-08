@@ -88,11 +88,6 @@ class ResourceWrapper(object):
         return child
 
 
-
-
-
-
-
 def approot(request):
     root = {
         'dashboard':    db.Bills,

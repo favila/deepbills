@@ -72,16 +72,13 @@ class Bills(BaseXResource):
     def __init__(self, db, billtype=None):
         super(Bills, self).__init__(db)
         self.billtype = billtype if billtype in self.billtypes else None
-        self.cachedlist = None
 
     def __getitem__(self, billtype):
-        if self.billtype is None or billtype not in self.billtypes:
+        if self.billtype is not None or billtype not in self.billtypes:
             raise KeyError
-        return located(BillList(self.db, billtype), billtype, self)
+        return located(Bills(self.db, billtype), billtype, self)
 
     def __call__(self):
-        if self.cachedlist is not None:
-            return self.cachedlist
         query = """\
 declare namespace cato = "http://namespaces.cato.org/catoxml";
 for $docmeta in db:open('deepbills', 'docmetas/')/docmeta
@@ -89,7 +86,7 @@ let $id := $docmeta/@id, $i := xs:string($id), $bill := $docmeta/bill,
     $btype := xs:string($bill/@type), $bnum := xs:positiveInteger($bill/@number),
     $lastrevid := max($docmeta/revisions/revision/@id),
     $lastrev := $docmeta/revisions/revision[@id = $lastrevid],
-    $doc := db:open($DB, $lastrev/@doc)[1],
+    $doc := db:open('deepbills', $lastrev/@doc)[1],
     $annotations := count($doc/descendant::cato:entity[@entity-type eq "annotation"])
 where if ($btype_filter) then ($btype = $btype_filter) else (true())
 order by $btype, $bnum 
@@ -108,11 +105,10 @@ return <tr>
 </tr>"""
         with self.db.query(query) as q:
             if self.billtype:
-                q.bind('btype_filter', response['bill_type'], 'xs:string')
+                q.bind('btype_filter', self.billtype, 'xs:string')
             else:
                 q.bind('btype_filter', 'false()', 'xs:boolean')
-            self.cachedlist = q.execute()
-        return self.cachedlist
+            return q.execute()
 
     def create(self, docmeta, doc):
         """Create a new bill from docmeta and doc (both xml strings)"""
@@ -512,11 +508,13 @@ declare function local:extract-entity-name-id-attr($entity as element()*) as nod
             q.bind('query', searchterm)
             try:
                 xml = q.execute()
-            except IOError, e:
+            except IOError:
                 xml = None
-        return xml
+        return [db.xml_to_map(e) for e in ET.fromstring(xml)]
+
 
     def entity(self, entityid):
+        "Return a single vocabulary entry (an Entity) with entityid, or None if not found"
         query = """\
 declare variable $entityid as xs:string external;
 declare function local:extract-entity-name-id-attr($entity as element()*) as node()* {
@@ -545,3 +543,19 @@ return
             except IOError:
                 xml = None
         return xml
+
+    def __getitem__(self, entityid):
+        xml = self.entity(entityid)
+        if xml is None:
+            return KeyError(entityid)
+        return located(VocabularyEntry(xml), entityid, self)
+
+class VocabularyEntry(object):
+    """A single entity of a Vocabulary lookup table."""
+    def __init__(self, xmldata):
+        self.xmldata = xmldata
+
+    def asmap(self):
+        return xml_to_map(ET.fromstring(self.xmldata))
+
+
