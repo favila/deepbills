@@ -42,7 +42,7 @@ class Session(BaseXClient.Session):
         try:
             return self.execute(cmd)
         except IOError:
-            raise KeyError(path.join('/'))
+            raise KeyError('/'.join(path))
 
     def document_exists(self, *path):
         "Returns True if a document exists at path; raises KeyError otherwise"
@@ -58,7 +58,7 @@ class Session(BaseXClient.Session):
         try:
             self.execute(cmd)
         except IOError:
-            raise KeyError(path.join('/'))
+            raise KeyError('/'.join(path))
         else:
             return True
 
