@@ -236,10 +236,12 @@ class Bill(BaseXResource):
         If +text+ is omitted, a new revision will be saved without changing the
         text.
         """
+        # TODO: add sanity checking on save
+        # See https://dancingmammoth.basecamphq.com/projects/9856486-government-transparency-project/todo_items/152232380/comments
         query = """\
 declare option db:chop 'false';
 declare namespace cato = "http://namespaces.cato.org/catoxml";
-let $metapath   := concat('docmetas/', $docid, '.xml'),
+let $metapath  := concat('docmetas/', $docid, '.xml'),
     $docmeta   := db:open('deepbills', $metapath)/docmeta,
     $lastrevid := xs:positiveInteger(fn:max($docmeta/revisions/revision/@id)),
     $newrevid  := $lastrevid + 1,
@@ -445,9 +447,17 @@ class Lock(BaseXResource):
         super(Lock, self).__init__(db)
         self.docid = docid
 
-    def acquire(self, userid, time):
+    def acquire(self, userid):
+        """Acquire lock on current doc for userid.
+
+        Return (True, status) on success (acquisition or lock refresh)
+        Return (False, status) on failure (someone else holds lock)
+        """
+        # TODO: should calculate duration against timeout here instead of
+        # relying on "reap()".
         query = """\
-let $docmeta := db:open('deepbills', 'docmetas/%s.xml')/docmeta
+let $docmeta := db:open('deepbills', 'docmetas/%s.xml')/docmeta,
+    $time := current-dateTime()
 return if ($docmeta/lock[@userid=$userid])
     then (
         replace value of node $docmeta/lock/@time with $time,
@@ -455,18 +465,26 @@ return if ($docmeta/lock[@userid=$userid])
     ) else
     if ($docmeta/lock)
     then (
-        db:output(<acquire status="failed">{($docmeta/@lock, $docmeta/@time)}</acquire>)
+        db:output(<acquire status="failed">{($docmeta/@id, $docmeta/lock/@userid, $docmeta/lock/@time)}</acquire>)
     ) else (
         insert node <lock userid="{$userid}" time="{$time}"
         db:output(<acquire status="acquired"/>)
     )""" % xqe(self.docid)
         with self.db.query(query) as q:
             q.bind('userid', userid, 'xs:string')
-            q.bind('time', time, 'xs:dateTime')
             result = xml_to_map(ET.fromstring(q.execute()))
-        return result
+        if result['status'] == 'failed':
+            return False, status 
+        return True, status
 
     def release(self, userid=None):
+        """Release lock for doc+userid
+
+        If userid is not provided, releases lock unconditionally.
+        Returns (True, status) on success
+        Returns (False, status) on failure
+        """
+        # TODO: release lock if exceeded timeout, even if was held by another
         query = """\
 let $docmeta := db:open('deepbills', 'docmetas/%s.xml')/docmeta
 return if ($userid and $docmeta/lock[@userid=$userid])
@@ -476,7 +494,7 @@ return if ($userid and $docmeta/lock[@userid=$userid])
     ) else
     if ($docmeta/lock)
     then (
-        db:output(<acquire status="failed">{($docmeta/@lock, $docmeta/@time)}</acquire>)
+        db:output(<acquire status="failed">{($docmeta/@id, $docmeta/lock/@userid, $docmeta/lock/@time)}</acquire>)
     ) else (
         insert node <lock userid="{$userid}" time="{$time}"
         db:output(<acquire status="acquired"/>)
@@ -487,7 +505,9 @@ return if ($userid and $docmeta/lock[@userid=$userid])
             else:
                 q.bind('userid', userid, 'xs:string')
             result = xml_to_map(ET.fromstring(q.execute()))
-        return result
+        if result['status'] == 'failed':
+            return False, result
+        return True, result
 
 
 
