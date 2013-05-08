@@ -38,7 +38,7 @@ class Session(BaseXClient.Session):
 
         xe_db, xe_rest = map(xquery_escape, path)
 
-        cmd = "XQUERY exactly-one(db:open('{}', '{}.xml'))".format(xe_db, xe_rest)
+        cmd = "XQUERY exactly-one(db:open('{}', '{}.xml'))/*".format(xe_db, xe_rest)
         try:
             return self.execute(cmd)
         except IOError:
