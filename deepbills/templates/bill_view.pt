@@ -98,7 +98,7 @@ $(function(){$('.column').equalHeight();});
 						<dd>${bill['metadata']['description']}</dd>
 					</dd>
 					<div class="submit_link">
-						<a tal:attributes="href request.route_url('bill_edit', docid=bill.name)">Edit Raw</a>|
+						<a tal:attributes="href request.resource_url(context, 'edit')">Edit Raw</a>|
 						<a target="_blank" tal:attributes="href request.route_url('akn_editor', _query=[('doc',bill.name)])">Edit</a>
 					</div>
 				</fieldset>
