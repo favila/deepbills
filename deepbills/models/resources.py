@@ -95,7 +95,7 @@ class ResourceWrapper(object):
 
 def approot(request):
     root = {
-        'dashboard':    db.BillList,
+        'dashboard':    db.Bills,
         'download':     db.Bills,
         'bills':        db.Bills,
         'vocabularies': db.Vocabularies,
@@ -103,7 +103,7 @@ def approot(request):
         'locks':        db.Locks,
     }
     ctor = lambda child, db=request.basex: child(db)
-    return ResourceWrapper(children=root_with_db, childcallback=ctor)
+    return ResourceWrapper(children=root, childcallback=ctor)
 
     
 

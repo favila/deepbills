@@ -59,7 +59,7 @@ class BaseXResource(object):
         self.db = db
 
 
-class BillList(BaseXResource):
+class Bills(BaseXResource):
     """Produce space-efficient lists of bill items, optionally filtered by bill type"""
     __acl__ = [
         (Allow, ('group:editor', 'group:admin'), 'view'),
@@ -70,7 +70,7 @@ class BillList(BaseXResource):
     billtypes = ['hr', 'hres', 'hconres', 'hjres', 's', 'sres', 'sconres', 'sjres']
 
     def __init__(self, db, billtype=None):
-        super(BillList, self).__init__(db)
+        super(Bills, self).__init__(db)
         self.billtype = billtype if billtype in self.billtypes else None
         self.cachedlist = None
 
@@ -145,7 +145,7 @@ class Bill(BaseXResource):
     ]
 
     def __init__(self, db, docid):
-        super(Doc, self).__init__(db)
+        super(Bill, self).__init__(db)
         self.docid = docid
         self._meta = self.db.get_document('deepbills', 'docmetas/{}'.format(docid))
         self._et_meta = None   # cache of docmeta Element (parsed)
@@ -280,7 +280,7 @@ class Users(BaseXResource):
     ]
     "Interface to all users"
     def __init__(self, db):
-        self.db = db
+        super(Users, self).__init__(db)
         self._usermap_cache = None
 
     @property
@@ -371,7 +371,7 @@ class User(BaseXResource):
 class Locks(BaseXResource):
     "Lists of currently-held locks"
     def __init__(self, db):
-        self.db = db
+        super(Locks, self).__init__(db)
         self._locklist = None
         self.release_timedout()
 
@@ -415,7 +415,7 @@ return delete node $lock"""
 class Lock(BaseXResource):
     "A document lock"
     def __init__(self, db, docid):
-        self.db = db
+        super(Lock, self).__init__(db)
         self.docid = docid
 
     def acquire(self, userid, time):
@@ -465,10 +465,7 @@ return if ($userid and $docmeta/lock[@userid=$userid])
 
 
 class Vocabularies(BaseXResource):
-    def __init__(self, db):
-        self.db = db
-
-    def __getattr__(self, vocabid):
+    def __getitem__(self, vocabid):
         return located(Vocabulary(self.db, vocabid), vocabid, self)
 
 
@@ -478,6 +475,7 @@ class Vocabulary(BaseXResource):
         self.vocabid = vocabid
         # this will raise KeyError on failure:
         self.db.document_exists('deepbills', 'vocabularies/{}'.format(vocabid))
+
 
     def body(self):
         return self.db.get_document('deepbills', 'vocabularies/{}'.format(self.vocabid))
