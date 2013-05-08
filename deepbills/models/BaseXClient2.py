@@ -54,13 +54,11 @@ class Session(BaseXClient.Session):
         xe_db, xe_rest = map(xquery_escape, path)
 
         # although there is an else clause, it won't be reached if doc does not exist
-        cmd = "XQUERY if (exactly-one(db:open('{}', '{}.xml'))) then 1 else ()".format(xe_db, xe_rest)
-        try:
-            self.execute(cmd)
-        except IOError:
-            raise KeyError('/'.join(path))
-        else:
-            return True
+        cmd = "XQUERY if db:is-xml('{}', '{}.xml')))".format(xe_db, xe_rest)
+        result = self.execute(cmd)
+        if result == 'false':
+            return KeyError
+        return True
 
 
 
