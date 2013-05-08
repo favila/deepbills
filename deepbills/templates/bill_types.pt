@@ -85,7 +85,7 @@ $(function(){$('.column').equalHeight();});
 		<header><h3>Bill Types</h3></header>
 		<div class="module_content">
 			<p tal:repeat="bill_type bill_types">
-				<a tal:attributes="href request.route_url('dashboard', billtype=bill_type)" tal:content="bill_type"/>
+				<a tal:attributes="href request.resource_url(request.root['dashboard'][bill_type])" tal:content="bill_type"/>
 			</p>
 		</div>
 		
