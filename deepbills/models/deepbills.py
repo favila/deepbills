@@ -169,6 +169,9 @@ class Bill(BaseXResource):
             self._revisions[None] = self._revisions[max(self._revisions.keys())]
         return self._revisions[rev]
 
+    def rev_asmap(self, rev=None):
+        return xml_to_map(self.rev(rev))
+
     def onlyrev(self, rev=None):
         "Return a docmeta Element with full revision history replaced by a single revision"
         rev = copy.deepcopy(self.rev(rev))
