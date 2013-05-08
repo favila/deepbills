@@ -1,4 +1,9 @@
 from pyramid.config import Configurator
+from models.deepbills import User
+from models.resources import approot
+from pyramid.authentication import BasicAuthAuthenticationPolicy
+from pyramid.authorization import ACLAuthorizationPolicy
+from pyramid.security import NO_PERMISSION_REQUIRED
 
 # URL structure:
 
@@ -32,20 +37,28 @@ from pyramid.config import Configurator
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
+    httpauthpolicy = BasicAuthAuthenticationPolicy(User.authentication_check, 'deepbills', debug=True)
+
     config = Configurator(settings=settings)
     # make request.basex available
     config.add_tween('deepbills.models.BaseXClient2.basexsession_tween_factory')
+
+    # set up auth
+    config.set_authentication_policy(httpauthpolicy)
+    config.set_authorization_policy(ACLAuthorizationPolicy())
+    config.set_default_permission(NO_PERMISSION_REQUIRED)
+    config.set_root_factory(approot)
+
+
     config.add_route('bill_types', '/')
-    config.add_route('dashboard_all', '/dashboard' )
-    config.add_route('dashboard', '/dashboard/{billtype}')
     config.add_route('query', '/query')
-    config.add_route('bill_create', '/bills/*/create')
-    config.add_route('bill_view', '/bills/{docid}/view')
-    config.add_route('bill_edit', '/bills/{docid}/edit')
-    config.add_route('bill_resource', '/bills/{docid}')
-    config.add_route('vocabulary_lookup', '/vocabularies/{vocabid}')
-    config.add_route('entity_lookup', '/vocabularies/{vocabid}/{entityid}')
     config.add_route('download', '/download')
+
+    # config.add_route('bill_create', '/bills/*/create')
+    # config.add_route('bill_view', '/bills/{docid}/view')
+    # config.add_route('bill_edit', '/bills/{docid}/edit', factory=Doc.from_request)
+    # config.add_route('bill_resource', '/bills/{docid}')
+
 
 
     config.add_static_view('Editor', 'static/AKN/Editor')

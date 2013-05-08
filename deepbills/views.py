@@ -1,17 +1,15 @@
 # coding: utf-8
 from pyramid.view import view_config, view_defaults
 from pyramid.response import Response
-from pyramid.security import forget
+from pyramid import security
 from pyramid.httpexceptions import (HTTPTemporaryRedirect, 
     HTTPSeeOther, HTTPBadRequest, HTTPNotFound, HTTPCreated, 
     HTTPConflict, HTTPInternalServerError, HTTPForbidden, HTTPUnauthorized)
 from pyramid.url import route_url
 
-from models import deepbills
+from models import deepbills as db
 
 from xml.etree import cElementTree as ET
-
-from codecs import BOM_UTF8
 
 import datetime
 
@@ -57,145 +55,57 @@ def xml_to_map(root):
 @view_config(context=HTTPForbidden)
 def auth_basic_challenge(request):
     """View to issue a challenge for auth-basic credentials when none are provided"""
-    response = HTTPForbidden
-    response.headers.update(forget(request))
+    response = HTTPUnauthorized()
+    response.headers.update(security.forget(request))
     return response
 
 
-@view_defaults(route_name='vocabulary_lookup', http_cache=3600)
+@view_defaults(context=db.Vocabulary, http_cache=3600)
 class Lookup(object):
     "Vocabulary lookups"
-    def __init__(self, request):
+    def __init__(self, context, request):
         self.request = request
-        self.vocabid = request.matchdict['vocabid']
-        self.vocab = deepbills.Vocabulary(request.basex, self.vocabid)
+        self.context = context
+        # self.vocabid = request.matchdict['vocabid']
+        # self.vocab = deepbills.Vocabulary(request.basex, self.vocabid)
 
     @view_config(renderer='string')
     def all(self):
-        vocabxml = self.vocab.body()
-        if vocabxml is None:
-            raise HTTPNotFound
+        vocabxml = self.context.body()
         self.request.response.content_type = 'application/xml'
         return vocabxml
+
+    @view_config(context=db.VocabularyEntry, renderer="json")
+    def one(self):
+        response = self.context.asmap()
+        return response
 
     @view_config(request_param='q', renderer='json')
     def search(self):
         searchterm = self.request.GET.get('q')
-        foundxml = self.vocab.search(searchterm)
-        if foundxml is None:
-            raise HTTPNotFound
-        xresults = ET.fromstring(foundxml)
-        aresults = [xml_to_map(e) for e in xresults.iter('e')]
-        return aresults
-
-    @view_config(route_name="entity_lookup", renderer="json")
-    def one(self):
-        entityid = self.request.matchdict['entityid']
-        xmlentity = self.vocab.entity(entityid)
-        if xmlentity is None:
-            raise HTTPNotFound
-        response = xml_to_map(ET.fromstring(xmlentity))
-        if not response:
-            raise HTTPNotFound
-        return response
+        return self.context.search(searchterm)
 
 
-class Bill(object):
-    def __init__(self, request):
-        self.request = request
-        self.docid = self.request.matchdict.get('docid', None)
-        self.doc = deepbills.Doc(self.request.basex, self.docid)
-
-
-    @view_config(route_name='bill_resource', renderer='string', request_method="GET")
-    def get(self):
-        responsexml = self.doc.body()
-        if responsexml is None:
-            raise HTTPNotFound
-        return Response(responsexml.encode('utf-8'), content_type="application/xml")
-
-
-@view_config(route_name='bill_create', request_method="POST")
-def create_bill_resource(request):
-    qcreate = ("""
-declare option db:chop "false";
-declare variable $DB as xs:string := xs:string($DBua);
-let $docmeta  := parse-xml($docmeta),
-    $docid    := $docmeta/docmeta/@id,
-    $docpath  := 'docs/' || $docid || '/1.xml',
-    $metapath := 'docmetas/' || $docid || '.xml'
-return if (db:open($DB, $metapath))
-    then db:output($docid || " exists")
-    else (
-        db:add($DB, $doc, $docpath),
-        db:add($DB, $docmeta, $metapath),
-        db:output($docid || " created")
-    )""",
-    ('doc', 'docmeta'))
-    with request.basex.query(*qcreate) as q:
-        q.bind('doc', request.POST['doc'].value.decode('utf-8'))
-        q.bind('docmeta', request.POST['docmeta'].value)
-        msg = q.execute()
-    docid, status = msg.split()
-    if status == 'exists':
-        return HTTPConflict(body=msg+"\n")
-    elif status == 'created':
-        newlocation = "/bills/{}".format(docid)
-        return HTTPCreated(body=newlocation+"\n", headers=[('Location',newlocation)])
-    else:
-        return HTTPInternalServerError(body="unknown error\n")
-
-
-
-@view_config(route_name='bill_resource', renderer='json', request_method="PUT")
-def save_bill_resource(request):
-    docid = request.matchdict['docid']
-    response = {}
-    newbill = {
-        'commit-time': now_isoformat(),
-        'comitter' : '/users/favila.xml',
-        'description': 'Edited via AKN',
-        'text': request.body.decode('utf-8'),
+@view_config(route_name='bill_types', renderer="templates/bill_types.pt", http_cache=3600)
+def bill_types(request):
+    response = {
+        'page_title': 'Dashboard',
+        'site_name': 'DeepBills',
+        'bill_types': db.BillList.billtypes,
     }
-    qupdate = ("""
-        declare option db:chop "false";
-        declare variable $DB as xs:string := xs:string($DBua);
-        declare variable $docmeta := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta;
-        declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
-        declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
-        declare variable $oldstatus := xs:string($docmeta/revisions/revision[
-                @id = fn:max($docmeta/revisions/revision[@status!='']/@id)
-            ]/@status);
-        insert nodes 
-            <revision id="{$newrev}" commit-time="{$commit-time}" 
-                comitter="{$comitter}" 
-                doc="{concat('/', $newdocpath)}"
-                status="{if ($oldstatus = ('new','auto-markup'))
-                    then 'in-progress' else $oldstatus}"
-                >
-                <description>{$description}</description>
-            </revision>
-        as last into $docmeta/revisions,
-        db:add($DB, $text, $newdocpath)
-    
-    """, 'docid commit-time comitter description text'.split())
+    return response
 
-    if not newbill['description'] or not newbill['text']:
-        request.response.status_code = 400
-        response['error'] = 'Description and text are required'
-        return response
 
-    try:
-        with request.basex.query(*qupdate) as q:
-            q.bind('docid', docid)
-            q.bind('commit-time', newbill['commit-time'])
-            q.bind('comitter', newbill['comitter'])
-            q.bind('description', newbill['description'])
-            q.bind('text', newbill['text'])
-            q.execute()
-    except IOError, e:
-        request.response.status_code = 500
-        response['error'] = e.message
+@view_config(context=db.BillList, renderer="templates/dashboard.pt", http_cache=3600)
+def dashboard(context, request):
+    response = {
+        'page_title': 'Dashboard',
+        'site_name':  'DeepBills',
+        'rows':        context(),
+        'bill_type':   context.billtype
+    }
+    if response['bill_type']:
+        response['page_title'] += ': ' + response['bill_type']
     return response
 
 
@@ -221,192 +131,171 @@ def query(request):
     response['result'] = "\n".join(response['result'])
     return response
 
-@view_config(route_name='bill_types', renderer="templates/bill_types.pt", http_cache=3600)
-def bill_types(request):
-    response = {
-        'page_title': 'Dashboard',
-        'site_name': 'DeepBills',
-        'bill_types':'hr hres hconres hjres s sres sconres sjres'.split(),
-    }
-    return response
 
-@view_config(route_name='dashboard', renderer="templates/dashboard.pt", http_cache=3600)
-@view_config(route_name='dashboard_all', renderer="templates/dashboard.pt", http_cache=3600)
-def dashboard(request):
-    response = {
-        'page_title': 'Dashboard',
-        'site_name': 'DeepBills',
-        'rows':'',
-        'bill_type': request.matchdict.get('billtype', None)
-    }
-    if response['bill_type']:
-        response['page_title'] += ': ' + response['bill_type']
-    query = """
-    declare namespace cato = "http://namespaces.cato.org/catoxml";
-    declare variable $DB as xs:string := xs:string($DBua);
-    for $docmeta in db:open($DB, 'docmetas')/docmeta
-    let $id := $docmeta/@id, $i := xs:string($id), $bill := $docmeta/bill,
-        $btype := xs:string($bill/@type), $bnum := xs:positiveInteger($bill/@number),
-        $lastrevid := max($docmeta/revisions/revision/@id),
-        $lastrev := $docmeta/revisions/revision[@id = $lastrevid],
-        $doc := db:open($DB, $lastrev/@doc)[1],
-        $annotations := count($doc/descendant::cato:entity[@entity-type eq "annotation"])
-    where if ($btype_filter) then ($btype = $btype_filter) else (true())
-    order by $btype, $bnum 
-    return <tr>
-        <td class="bname">{$i}</td>
-        <td class="bname number">{$btype}</td>
-        <td class="bname number">{$bnum}</td>
-        <td class="number revision">{$lastrevid}</td>
-        <td class="annotation number">{if ($annotations) then ($annotations) else ()}</td>
-        <td>{xs:string($lastrev/@status)}</td>
-        <td class="number">{sum($doc/descendant::text() ! string-length(.))}</td>
-        <td>{tokenize($lastrev/@commit-time, '[T+.]')[position()=(1,2)]}</td>
-        <td><a href="/bills/{$i}/view">view</a></td>
-        <td><a href="/bills/{$i}/edit">raw edit</a></td>
-        <td><a target="_blank" href="/Editor/Index.html?doc={$i}">edit</a></td>
-    </tr>"""
-    with request.basex.query(query) as qr:
-        if response['bill_type']:
-            qr.bind('btype_filter', response['bill_type'], 'xs:string')
+@view_defaults(context=db.Bill)
+class Bill(object):
+    def __init__(self, context, request):
+        self.request = request
+        self.context = context
+
+    @view_config(renderer='string', request_method="GET")
+    def get(self):
+        lock = int(self.request.GET.get('lock', '0'))
+        if lock:
+            locked, status = db.Lock(self.request.basex, self.context.docid).acquire()
+            if not locked:
+                raise HTTPConflict(
+                    content_type='text/plain',
+                    body="Failed to acquire lock on {id}: currently held by"
+                         "{userid} since {time}\n".format(status))
+
+        response = Response(self.context.doc(), content_type="application/xml")
+
+    @view_config(permission='revise', request_method="POST", renderer='json')
+    def put(self):
+        "A save from the editor"
+        response = {}
+        # to save, must: have permission to save given bill's current status
+        #   AND have a lock on the bill                        
+        if self.context.rev_asmap()['status'] == 'complete' and not security.has_permission('complete', self.context, self.request):
+            raise HTTPForbidden(
+                content_type="text/plain", 
+                body="You may not save a new revision of a completed bill\n")
+        db.Locks(self.request.basex).reap()
+        locked, status = db.Lock(self.request.basex, self.context.docid).acquire()
+        if not locked:
+            raise HTTPConflict(
+                content_type='text/plain',
+                body="Failed to acquire lock on {id}: currently held by"
+                     "{userid} since {time}\n".format(status))
+
+        newbill = {
+            'time':        now_isoformat(),
+            'comitter' :   security.authenticated_userid(request),
+            'description': 'Edited via AKN',
+            'text':        request.body.decode('utf-8'),
+        }
+
+        if not newbill['description'] or not newbill['text']:
+            self.request.response.status_code = 400
+            response['error'] = 'Description and text are required'
+            return response
+
+        self.context.save(newbill['committer'], newbill['time'], **newbill)
+
+        if self.request.GET.get('release'):
+            db.Lock('release')
+
+        return response
+
+
+    @view_config(context=db.Bills, request_method="POST")
+    def create(self):
+        docmeta = self.request.POST['docmeta'].value
+        doc = self.request.POST['doc'].value.decode('utf-8')
+        docid, status = context.create(docmeta, doc)
+        if status == 'exists':
+            return HTTPConflict(body="{} {}\n".format(docid, status))
+        elif status == 'created':
+            newlocation = "/bills/{}".format(docid)
+            return HTTPCreated(body=newlocation+"\n", location=newlocation)
         else:
-            qr.bind('btype_filter', 'false()', 'xs:boolean')
-        response['rows'] = qr.execute()
+            return HTTPInternalServerError(body="unknown error\n")
 
-    return response
-
-
-@view_config(route_name="bill_view", renderer="templates/bill_view.pt")
-def bill_view(request):
-    docid = request.matchdict['docid']
-    response = {
-        'page_title': 'View Bill {}'.format(docid),
-        'site_name': 'DeepBills',
-        'bill' : dict(name='name', revision="1", metadata={'status':'','commit-time':'', 'committer':'','description':''}, text="<root></root>"),
-        'error': '',
-    }
-    
-    qrevision = ("""
-        declare variable $DB as xs:string := xs:string($DBua);
-        let $docuri := 'docmetas/' || $docid || '.xml'
-        for $latestrevision in db:open($DB, $docuri)/docmeta/revisions/revision[last()]
-        let $latestdoc := db:open($DB, $latestrevision/@doc)
-        return
-        (
-            string($latestrevision/../../@id),
-            string($latestrevision/@id),
-            string($latestrevision/@commit-time),
-            string($latestrevision/@comitter),
-            string($latestrevision/description),
-            string($latestrevision/@status),
-            $latestdoc
-        )
-    """, ['docid'])
-    try:
-        with request.basex.query(*qrevision) as qr:
-            qr.bind('docid', docid)
-            qresponse = [v for t, v in qr.iter()]
-            if not qresponse:
-                raise HTTPNotFound
-            response['bill']['name'] = qresponse[0]
-            response['bill']['revision'] = qresponse[1]
-            response['bill']['metadata']['commit-time'] = qresponse[2]
-            response['bill']['metadata']['committer'] = qresponse[3]
-            response['bill']['metadata']['description'] = qresponse[4]
-            response['bill']['metadata']['status'] = qresponse[5]
-            response['bill']['text'] = qresponse[6]
-
-    except IOError, e:
-        response['error'] = e.message
-    
-    return response
-
-
-
-@view_config(route_name="bill_edit", renderer="templates/bill_edit.pt")
-def bill_edit(request):
-    docid = request.matchdict['docid']
-    response = {
-        'page_title': 'Edit Bill {}'.format(docid),
-        'site_name': 'DeepBills',
-        'bill' : {
-            'name':docid,
-            'description': '',
-            'text': '',
-            'revision': '',
-            'status'   : '',
-        },
-        'error': '',
-        'statuses' : ['new', 'auto-markup', 'in-progress', 'needs-review', 'complete'],
-    }
+    @view_config(name="view", renderer="templates/bill_view.pt", permission="view")
+    def view(self):
+        response = {
+            'page_title': 'View Bill {}'.format(self.context.docid),
+            'site_name': 'DeepBills',
+            'bill' : dict(name='name', revision="1", metadata={'status':'','commit-time':'', 'committer':'','description':''}, text="<root></root>"),
+            'error': '',
+        }
         
-    qget = ("""
-    declare variable $DB as xs:string := xs:string($DBua);
-    declare variable $latestrevision := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta/revisions/revision[last()];
-    (db:open($DB, $latestrevision/@doc), (xs:string($latestrevision/@status), 'new')[1], xs:string($latestrevision/@id))
-    """, ['docid'])
-    
-    qupdate = ("""
-        declare option db:chop "false";
-        declare variable $DB as xs:string := xs:string($DBua);
-        declare variable $docmeta := db:open($DB, concat('docmetas/', $docid, '.xml'))/docmeta;
-        declare variable $newrev := fn:max($docmeta/revisions/revision/@id)+1;
-        declare variable $newdocpath := concat('docs/', string($docid), '/', string($newrev), '.xml');
-        insert nodes 
-            <revision id="{$newrev}" commit-time="{$commit-time}"
-            comitter="{$comitter}" doc="{concat('/', $newdocpath)}"
-            status="{$status}">
-                <description>{$description}</description>
-            </revision>
-        as last into $docmeta/revisions,
-        db:add($DB, $text, $newdocpath)
-    
-    """, 'docid commit-time comitter status description text'.split())
-    
-    def addbilldata(docid, response):
-        try:
-            with request.basex.query(*qget) as qr:
-                qr.bind('docid', docid)
-                qresponse = [v for t, v in qr.iter()]
-                response['bill']['text'] = qresponse[0]
-                response['bill']['status'] = qresponse[1]
-                response['bill']['revision'] = qresponse[2]
-        except IOError, e:
-            response['error'] = e.message
+        revdata = self.context.rev_asmap()
+        response['bill']['name'] = self.context.docid
+        response['bill']['revision'] = revdata['id']
+        response['bill']['metadata'].update(revdata)
+        del response['bill']['metadata']['id']
+        response['bill']['text'] = self.context.doc()
 
-    if request.method == 'GET':
-        addbilldata(docid, response)
-    elif request.method == 'POST':
+        return response
+
+
+    def edit_form_response(self):
+        docid = self.context.docid
+        rev = self.context.rev_asmap()
+        response = {
+            'page_title': 'Edit Bill {}'.format(docid),
+            'site_name': 'DeepBills',
+            'bill' : {
+                'name':  docid,
+                'description': '',
+                'text': '',
+                'revision': rev['id'],
+                'status': rev['status'],
+            },
+            'error': '',
+            'statuses' : ['new', 'auto-markup', 'in-progress', 'needs-review', 'complete'],
+        }
+        return response
+
+
+    @view_config(name='edit', permission='revise', renderer="templates/bill_edit.pt", request_method="GET")
+    def edit_form(self):
+        response = self.edit_form_response()
+        if has_permission('complete', self.context, self.request):
+            response['bill']['text'] = self.context.doc()
+        return response
+
+
+    @view_config(name="edit", permission='revise', renderer="templates/bill_edit.pt", request_method="POST")
+    def edit(self):
+        "A save from the Edit Raw screen"
+        response = self.edit_form_response()
         newbill = {
             'commit-time': now_isoformat(),
-            'comitter': '/users/favila.xml',
-            'description': request.POST.get('description', '').strip(),
-            'text': request.POST.get('text', '').strip(),
-            'status': request.POST.get('status', '').strip(),
+            'comitter':    security.authenticated_userid(self.request),
+            'description': self.request.POST.get('description', '').strip(),
+            'text':        self.request.POST.get('text', '').strip(),
+            'status':      self.request.POST.get('status', '').strip(),
         }
+
+        iscommitter = security.has_permission('committer', self.context, self.request)
+
+        if not iscommitter and (newbill['description'] or newbill['status'] == 'completed'):
+            newbill['text'] = ''
+            response['error'] = "Error: only an administrator may complete a bill or edit its xml directly."
+            self.request.response.status_code = 403 # forbidden -- but show form
+
         response['bill']['status'] = newbill['status']
         response['bill']['description'] = newbill['description']
         response['bill']['text'] = newbill['text']
 
         if not newbill['text'] or not newbill['status']:
-            addbilldata(docid, response)
             response['error'] = 'Text and status are required'
             return response
 
-        try:
-            with request.basex.query(*qupdate) as q:
-                q.bind('docid', docid)
-                q.bind('commit-time', newbill['commit-time'])
-                q.bind('comitter', newbill['comitter'])
-                q.bind('status', newbill['status'])
-                q.bind('description', newbill['description'])
-                q.bind('text', newbill['text'])
-                q.execute()
-                return HTTPSeeOther(location="/bills/{}/view".format(docid))
-        except IOError, e:
-            response['error'] = e.message
+        action = self.request.POST.get('action')
+        nextlocation = location="/bills/{}/view".format(docid)
+        if action == 'Save and Edit Next':
+            newbillid = self.context.next()
+            if newbillid:
+                nextlocation = '/Editor/Index.html?doc={}'.format(newbillid)
+        elif action == 'Save and Return':
+            dashboard = db.Dashboard(self.request.basex, self.context.asmap()['bill']['type'])
+            nextlocation = self.request.resource_url(dashboard)
+        return HTTPSeeOther(nextlocation)
 
-    return response
+
+@view_defaults(context=db.Locks, renderer='json')
+class Locks(object):
+    def __init__(self, context, request):
+        self.context = context
+        self.request = request
+
+    @view_config(request_method='GET')
+    def list(self):
+        return self.context.asmap()
 
 
 @view_config(route_name="download")
@@ -442,22 +331,21 @@ metadata is available at http://namespaces.cato.org/catoxml
 """
     xquery = """
     declare namespace xs = "http://www.w3.org/2001/XMLSchema";
-    declare variable $DB as xs:string := xs:string($DBua);
     (
-    for $meta in db:open($DB,'docmetas/')/docmeta
+    for $meta in db:open('deepbills','docmetas/')/docmeta
     let $latestrevid := max($meta/revisions/revision/@id)
     let $latestrev := $meta/revisions/revision[@id = $latestrevid]
     where $latestrevid > 1
-    return ('bills/'||$meta/@id||'.xml', string($latestrev/@commit-time), db:open($DB, $latestrev/@doc)/*)
+    return ('bills/'||$meta/@id||'.xml', string($latestrev/@commit-time), db:open('deepbills', $latestrev/@doc)/*)
     ,
-    for $doc in db:open($DB, 'vocabularies/')[/entities]
+    for $doc in db:open('deepbills', 'vocabularies/')[/entities]
     let $filename := substring-after(document-uri($doc), '/')
     let $updated := $doc/entities/@updated
     where $filename != 'vocabularies/federal-entities.xml'
     return ($filename, string($updated), $doc)
     ,
     let $schemauri := 'schemas/vocabulary.xsd'
-    for $doc in db:open($DB, $schemauri)
+    for $doc in db:open('deepbills', $schemauri)
     let $lastmod := $doc/xs:schema/xs:annotation/xs:appinfo/modified
     return ($schemauri, string($lastmod), $doc)
     )"""
