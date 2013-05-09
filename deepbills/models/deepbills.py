@@ -338,7 +338,9 @@ class Users(BaseXResource):
         "Create a new User from a dict with the user's fields"
         user = ET.Element('user')
         user.attrib.update(userdata)
+        user.attrib['password'] = pwd_context.encrypt(user.get('password'))
         userxml = ET.tostring(user)
+        # TODO: don't allow inserting duplicate id!
         query = """\
 let $users := db:open('users', 'user.xml')/users
 return insert node $newuser into $users"""
@@ -362,30 +364,42 @@ class User(BaseXResource):
         ]
         if userdata is None:
             users = Users(self.db)
-            userdata = users[userid]
+            userdata = users[userid]()
         self._userdata = userdata
 
-    def __getattr__(self, name):
+    def get(self, name):
         return self._userdata[name]
 
-    def __setattr__(self, name, value):
+    def set(self, name, value):
         self._userdata[name] = value
+
+    def save(self, encrypt_password=False):
+        query = "replace node db:open('users','user.xml')/users/user[@id=$newdata/@id] with $newdata"
+        newdata = ET.Element('user')
+        if encrypt_password:
+            self._userdata['password'] = pwd_context.encrypt(self._userdata['password'])
+        newdata.attrib.update(self._userdata)
+        newdataxml = ET.tostring(newdata)
+        with self.db.query(query) as q:
+            q.bind('newdata', newdataxml, 'element()')
+            q.execute()
+
 
     @property
     def principals(self):
         "Return a list of security principals for this user"
         principals = [self.userid]
-        principals.extend(self.roles)
+        principals.extend(self.get('roles'))
         return principals
 
     @staticmethod
     def user_with_pass(db, userid, passwd):
         """Return valid user or None"""
         try:
-            user = User(db, userid)
+            user = Users(db)[userid]
         except KeyError:
             return None
-        if not pwd_context.verify(passwd, user.password):
+        if not pwd_context.verify(passwd, user.get('password')):
             return None
         return user
 
@@ -439,7 +453,7 @@ let $locktime := xs:dateTime($lock/@time)
 where ($now - $locktime) > $timeout-duration
 return delete node $lock"""
         with self.db.query(query) as q:
-            q.bind('timeout-seconds', timeout)
+            q.bind('timeout-seconds', str(timeout))
             q.execute()
 
 
@@ -457,6 +471,8 @@ class Lock(BaseXResource):
         """
         # TODO: should calculate duration against timeout here instead of
         # relying on "reap()".
+        if not userid:
+            return False, {'status':'failed', 'error':'must supply userid'}
         query = """\
 let $docmeta := db:open('deepbills', 'docmetas/%s.xml')/docmeta,
     $time := current-dateTime()
