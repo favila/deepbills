@@ -37,7 +37,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
-    httpauthpolicy = BasicAuthAuthenticationPolicy(User.authentication_check, 'deepbills', debug=True)
+    httpauthpolicy = BasicAuthAuthenticationPolicy(User.authentication_check, 'deepbills')
 
     config = Configurator(settings=settings)
     # make request.basex available
@@ -53,12 +53,6 @@ def main(global_config, **settings):
     config.add_route('bill_types', '/')
     config.add_route('query', '/query')
     config.add_route('download', '/download')
-
-    # config.add_route('bill_create', '/bills/*/create')
-    # config.add_route('bill_view', '/bills/{docid}/view')
-    # config.add_route('bill_edit', '/bills/{docid}/edit', factory=Doc.from_request)
-    # config.add_route('bill_resource', '/bills/{docid}')
-
 
 
     config.add_static_view('Editor', 'static/AKN/Editor')
