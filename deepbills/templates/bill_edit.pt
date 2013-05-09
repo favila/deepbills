@@ -99,16 +99,20 @@ $(function(){$('.column').equalHeight();});
 					</select>
 				</fieldset>
 				<fieldset>
+					<div class="submit_link">
+						<a tal:attributes="href string: /Editor/Index.html?doc=${bill.name}">Open in Editor</a>
+						<input type="submit" name="action" class="alt_btn" value="Save" />
+						<input type="submit" name="action" class="btn" value="Save and Edit Next" />
+						<input type="submit" name="action" class="btn" value="Save and Return" />
+					</div>
+				</fieldset>
+
+				<fieldset>
 					<label>XML</label>
 					<textarea name="text" rows="40">${bill.text}</textarea>
 				</fieldset>
 				<div class="clear"></div>
 			</div>
-			<footer>
-				<div class="submit_link">
-					<input type="submit" class="alt_btn" value="Submit" />
-				</div>
-			</footer>
 			</form>
 		</article>
 		<div class="clear"></div>
