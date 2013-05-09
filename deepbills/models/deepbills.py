@@ -3,6 +3,7 @@
 
 Bills, users, vocabularies
 """
+# pylint: disable=R0924,C0301
 
 # we use xquery_escape for literal string inclusion in queries instead of using
 # the query binding mechanism because of limitations in the BaseX query
@@ -297,7 +298,7 @@ return (
             q.execute()
 
         # clear any cached metadata if successful
-        self._meta = self.db.get_document('deepbills', 'docmetas/{}'.format(docid))
+        self._meta = self.db.get_document('deepbills', 'docmetas/{}'.format(self.docid))
         self._et_meta = None
         self._revisions = None
         self._docs = {}
@@ -305,12 +306,12 @@ return (
 
 
 class Users(BaseXResource):
+    "Interface to all users"
     __acl__ = [
         (Allow, ('group:editor','group:admin'), 'view'),
         (Allow, 'group:admin', 'create'),
         DENY_ALL
     ]
-    "Interface to all users"
     def __init__(self, db):
         super(Users, self).__init__(db)
         self._usermap_cache = None
@@ -318,7 +319,7 @@ class Users(BaseXResource):
     @property
     def _usermap(self):
         if self._usermap_cache is None:
-            userlist = xml_to_map(ET.fromstring(db.get_document('users', 'users')), ['users'])
+            userlist = xml_to_map(ET.fromstring(self.db.get_document('users', 'users')), ['users'])
             for user in userlist:
                 user['roles'] = user['roles'].strip().split()
             usermap = {u['id']:u for u in userlist}
@@ -355,7 +356,7 @@ class User(BaseXResource):
         self.userid = userid
         # users have *per-instance* ACLs!!
         self.__acl__ = [
-            (Allow, self.userid, ('view', 'edit'))
+            (Allow, self.userid, ('view', 'edit')),
             (Allow, 'group:admin', ('view', 'edit')),
             DENY_ALL
         ]
@@ -384,7 +385,7 @@ class User(BaseXResource):
             user = User(db, userid)
         except KeyError:
             return None
-        if not pwd_context.verify(passwd, user('password')):
+        if not pwd_context.verify(passwd, user.password):
             return None
         return user
 
@@ -438,6 +439,7 @@ let $locktime := xs:dateTime($lock/@time)
 where ($now - $locktime) > $timeout-duration
 return delete node $lock"""
         with self.db.query(query) as q:
+            q.bind('timeout-seconds', timeout)
             q.execute()
 
 
@@ -474,8 +476,8 @@ return if ($docmeta/lock[@userid=$userid])
             q.bind('userid', userid, 'xs:string')
             result = xml_to_map(ET.fromstring(q.execute()))
         if result['status'] == 'failed':
-            return False, status 
-        return True, status
+            return False, result 
+        return True, result
 
     def release(self, userid=None):
         """Release lock for doc+userid
@@ -561,7 +563,7 @@ declare function local:extract-entity-name-id-attr($entity as element()*) as nod
                 xml = q.execute()
             except IOError:
                 xml = None
-        return [db.xml_to_map(e) for e in ET.fromstring(xml)]
+        return [xml_to_map(e) for e in ET.fromstring(xml)]
 
 
     def entity(self, entityid):
