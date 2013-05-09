@@ -24,7 +24,7 @@ def located(obj, name, parent):
     obj.__parent__ = parent
     return obj
 
-def xml_to_map(root, lists=()):
+def xml_to_map(root, lists=(), isroot=True):
     """Return an ElementTree as a map
 
     Attributes and child element names become keys. Attributes will have scalar
@@ -41,14 +41,14 @@ def xml_to_map(root, lists=()):
     if root.tag in lists:
         mapping = []
         for child in root:
-            mapping.append(xml_to_map(child, lists))
+            mapping.append(xml_to_map(child, lists, False))
     else:
         mapping = {}
         mapping.update(root.attrib)
         for child in root:
-            mapping[child.tag] = xml_to_map(child, lists)
-    if not mapping:
-        return root.text or ''
+            mapping[child.tag] = xml_to_map(child, lists, False)
+        if not mapping and not isroot:
+            mapping = root.text or ''
     return mapping
 
 
