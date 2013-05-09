@@ -12,7 +12,7 @@ import datetime
 
 ZERO = datetime.timedelta(0)
 
-# pylint: disable=C0301
+# pylint: disable=C0301,W0142
 
 
 class UTC(datetime.tzinfo):
@@ -141,20 +141,33 @@ class Bill(object):
         self.context = context
         self.userid = security.authenticated_userid(request)
 
+    def lock(self, action=None):
+        "Perform any locking requested by the current request"
+        if action is None: # no explicit action
+             # look for implicit action from request
+            action = self.request.GET.get('lock')
+            if action is None:
+                return
+        if not self.userid:
+            raise HTTPForbidden(content_type="text/plain",
+                body="Must be logged in to acquire or release a lock\n")
+        if action not in ['acquire', 'release']:
+            raise HTTPBadRequest(content="text/plain",
+                body="Unknown lock action {!r}\n" % action)
+        lockobj = db.Lock(self.request.basex, self.context.docid)
+        locked, status = getattr(lockobj, action)(self.userid)
+        if not locked:
+            raise HTTPConflict(
+                content_type='text/plain',
+                body="Failed to {action} lock on {id}: currently held by "
+                     "{userid} since {time}\n".format(action=action, **status))
+        return status
+
+
+
     @view_config(renderer='string', request_method="GET")
     def get(self):
-        lock = booleanflag(self.request.GET, 'lock')
-        if lock:
-            if not self.userid:
-                raise HTTPForbidden(content_type="text/plain",
-                    body="Must be logged in to acquire a lock\n")
-
-            locked, status = db.Lock(self.request.basex, self.context.docid).acquire(self.userid)
-            if not locked:
-                raise HTTPConflict(
-                    content_type='text/plain',
-                    body="Failed to acquire lock on {id}: currently held by"
-                         "{userid} since {time}\n".format(status))
+        self.lock()
         response = Response(self.context.doc(), content_type="application/xml")
         return response
 
@@ -168,13 +181,6 @@ class Bill(object):
             raise HTTPForbidden(
                 content_type="text/plain", 
                 body="You may not save a new revision of a completed bill\n")
-        db.Locks(self.request.basex).reap()
-        locked, status = db.Lock(self.request.basex, self.context.docid).acquire(self.userid)
-        if not locked:
-            raise HTTPConflict(
-                content_type='text/plain',
-                body="Failed to acquire lock on {id}: currently held by"
-                     "{userid} since {time}\n".format(status))
 
         newbill = {
             'time':        now_isoformat(),
@@ -188,10 +194,27 @@ class Bill(object):
             response['error'] = 'Description and text are required'
             return response
 
-        self.context.save(**newbill)
 
-        if booleanflag(self.request.GET, 'release'):
-            db.Lock('release')
+        # TODO: wrap this pattern in a context object "with thelock(): etc"
+        lockstatus = self.lock('acquire')
+        try:
+            self.context.save(**newbill)
+        except:
+            # if write failed for any reason and *this* request took the lock
+            # release the lock. This is to keep requests idempotent.
+            # If some other request took the lock (status=='acquired'), we
+            # don't touch the lock.
+            # Note that this still has a problem: the timestamp on the lock
+            # was updated and we're not rolling it back. A proper solution would
+            # use a context manager to restore the lock time.
+            # Perhaps we need a generic check-and-set mechanism on locks?
+            if lockstatus['status'] != 'reacquired':
+                self.lock('release')
+            raise
+        else:
+            # This lock() call is incase the user included a ?lock=release parameter
+            # If so, will release the lock we just took.
+            self.lock()
 
         return response
 
