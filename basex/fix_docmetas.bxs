@@ -4,7 +4,9 @@ SET AUTOFLUSH false
 
 # Rename docmeta  '@comitter' to '@committer'
 
-# remove leading slash from @doc and @user attributes
+# remove leading slash from @doc attribute
+
+# change @users attribute to a userid instead of a path
 
 # precalculate the @size and @annotations attributes for the latest revision of all bills. (this is a denormalization)
 

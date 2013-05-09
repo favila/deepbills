@@ -240,6 +240,7 @@ class Bill(BaseXResource):
         # TODO: add sanity checking on save
         # See https://dancingmammoth.basecamphq.com/projects/9856486-government-transparency-project/todo_items/152232380/comments
         # TODO: don't save text if unchanged
+        # TODO: fix typo in DB!
         query = """\
 declare namespace cato = "http://namespaces.cato.org/catoxml";
 declare option db:chop "false";
