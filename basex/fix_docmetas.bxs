@@ -1,0 +1,11 @@
+SET AUTOFLUSH false
+
+# Need xqueries here to fix problems in db:open('docmetas') post-split:
+
+# Rename docmeta  '@comitter' to '@committer'
+
+# remove leading slash from @doc attribute
+
+# precalculate the @size and @annotations attributes for the latest revision of all bills. (this is a denormalization)
+
+FLUSH
