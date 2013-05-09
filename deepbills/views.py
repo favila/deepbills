@@ -176,7 +176,7 @@ class Bill(object):
         response = Response(self.context.doc(), content_type="application/xml")
         return response
 
-    @view_config(permission='revise', request_method="POST", renderer='json')
+    @view_config(permission='revise', request_method="PUT", renderer='json')
     def put(self):
         "A save from the editor"
         response = {}
