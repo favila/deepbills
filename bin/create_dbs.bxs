@@ -1,0 +1,34 @@
+
+SET AUTOFLUSH false
+
+SET FTINDEX false
+SET TEXTINDEX false
+SET ATTRINDEX false 
+SET UPDINDEX false
+SET CHOP true
+CREATE DATABASE schemas /home/favila/db/schemas/
+
+SET FTINDEX false
+SET TEXTINDEX true
+SET ATTRINDEX true 
+SET UPDINDEX true
+SET CHOP true
+CREATE DATABASE vocabularies /home/favila/db/vocabularies/
+
+SET FTINDEX false
+SET TEXTINDEX false
+SET ATTRINDEX true
+SET UPDINDEX false
+SET CHOP false
+CREATE DATABASE docs /home/favila/db/docs/
+
+SET FTINDEX false
+SET TEXTINDEX false
+SET ATTRINDEX true
+SET UPDINDEX true
+SET CHOP true
+CREATE DATABASE docmetas /home/favila/db/docmetas/
+
+CREATE DATABASE users /home/favila/db/users/
+
+FLUSH
