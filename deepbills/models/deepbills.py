@@ -481,13 +481,13 @@ let $docmeta := db:open('deepbills', 'docmetas/%s.xml')/docmeta,
 return if ($docmeta/lock[@userid=$userid])
     then (
         replace value of node $docmeta/lock/@time with $time,
-        db:output(<acquire status="refreshed"/>)
+        db:output(<acquire status="reacquired"/>)
     ) else
     if ($docmeta/lock)
     then (
         db:output(<acquire status="failed">{($docmeta/@id, $docmeta/lock/@userid, $docmeta/lock/@time)}</acquire>)
     ) else (
-        insert node <lock userid="{$userid}" time="{$time}"
+        insert node <lock userid="{$userid}" time="{$time}"/> into $docmeta,
         db:output(<acquire status="acquired"/>)
     )""" % xqe(self.docid)
         with self.db.query(query) as q:
@@ -507,18 +507,16 @@ return if ($docmeta/lock[@userid=$userid])
         # TODO: release lock if exceeded timeout, even if was held by another
         query = """\
 let $docmeta := db:open('deepbills', 'docmetas/%s.xml')/docmeta
-return if ($userid and $docmeta/lock[@userid=$userid])
+return 
+    if (not($docmeta/lock))
+        then db:output(<release status="no-lock"/>)
+    else if (not($userid) or $docmeta/lock[@userid=$userid])
     then (
-        replace value of node $docmeta/lock/@time with $time,
-        db:output(<acquire status="refreshed"/>)
-    ) else
-    if ($docmeta/lock)
-    then (
-        db:output(<acquire status="failed">{($docmeta/@id, $docmeta/lock/@userid, $docmeta/lock/@time)}</acquire>)
-    ) else (
-        insert node <lock userid="{$userid}" time="{$time}"
-        db:output(<acquire status="acquired"/>)
-    )""" % xqe(self.docid)
+        delete node $docmeta/lock,
+        db:output(<release status="deleted"/>)
+    ) else 
+        db:output(<release status="failed">{($docmeta/@id, $docmeta/lock/@userid, $docmeta/lock/@time)}</release>)
+""" % xqe(self.docid)
         with self.db.query(query) as q:
             if userid is None:
                 q.bind('userid', 'false()', 'xs:boolean')
