@@ -374,11 +374,13 @@ class User(BaseXResource):
         self._userdata[name] = value
 
     def save(self, encrypt_password=False):
-        query = "replace node db:open('users','user.xml')/users/user[@id=$newdata/@id] with $newdata"
+        query = "replace node db:open('users','users.xml')/users/user[@id=$newdata/@id] with $newdata"
         newdata = ET.Element('user')
         if encrypt_password:
             self._userdata['password'] = pwd_context.encrypt(self._userdata['password'])
-        newdata.attrib.update(self._userdata)
+        userdata = dict(self._userdata)
+        userdata['roles'] = " ".join(userdata['roles'])
+        newdata.attrib.update(userdata)
         newdataxml = ET.tostring(newdata)
         with self.db.query(query) as q:
             q.bind('newdata', newdataxml, 'element()')
