@@ -5,15 +5,14 @@ from pyramid import security
 from pyramid.httpexceptions import (HTTPTemporaryRedirect, 
     HTTPSeeOther, HTTPBadRequest, HTTPNotFound, HTTPCreated, 
     HTTPConflict, HTTPInternalServerError, HTTPForbidden, HTTPUnauthorized)
-from pyramid.url import route_url
 
 from models import deepbills as db
-
-from xml.etree import cElementTree as ET
 
 import datetime
 
 ZERO = datetime.timedelta(0)
+
+# pylint: disable=C0301
 
 
 class UTC(datetime.tzinfo):
@@ -123,7 +122,7 @@ def query(request):
     if response['query']:
         try:
             with request.basex.query(response['query']) as qr:
-                for typecode, item in qr.iter():
+                for _typecode, item in qr.iter():
                     response['result'].append(item)
         except IOError, e:
             response['error'] = e.message
@@ -131,25 +130,33 @@ def query(request):
     response['result'] = "\n".join(response['result'])
     return response
 
+def booleanflag(mdict, key):
+    v = mdict.get(key)
+    return not (v is None or v.lower() in ['', '0', 'no', 'false'])
 
 @view_defaults(context=db.Bill)
 class Bill(object):
     def __init__(self, context, request):
         self.request = request
         self.context = context
+        self.userid = security.authenticated_userid(request)
 
     @view_config(renderer='string', request_method="GET")
     def get(self):
-        lock = int(self.request.GET.get('lock', '0'))
+        lock = booleanflag(self.request.GET, 'lock')
         if lock:
-            locked, status = db.Lock(self.request.basex, self.context.docid).acquire()
+            if not self.userid:
+                raise HTTPForbidden(content_type="text/plain",
+                    body="Must be logged in to acquire a lock\n")
+
+            locked, status = db.Lock(self.request.basex, self.context.docid).acquire(self.userid)
             if not locked:
                 raise HTTPConflict(
                     content_type='text/plain',
                     body="Failed to acquire lock on {id}: currently held by"
                          "{userid} since {time}\n".format(status))
-
         response = Response(self.context.doc(), content_type="application/xml")
+        return response
 
     @view_config(permission='revise', request_method="POST", renderer='json')
     def put(self):
@@ -162,7 +169,7 @@ class Bill(object):
                 content_type="text/plain", 
                 body="You may not save a new revision of a completed bill\n")
         db.Locks(self.request.basex).reap()
-        locked, status = db.Lock(self.request.basex, self.context.docid).acquire()
+        locked, status = db.Lock(self.request.basex, self.context.docid).acquire(self.userid)
         if not locked:
             raise HTTPConflict(
                 content_type='text/plain',
@@ -171,9 +178,9 @@ class Bill(object):
 
         newbill = {
             'time':        now_isoformat(),
-            'comitter' :   security.authenticated_userid(request),
+            'comitter' :   self.userid,
             'description': 'Edited via AKN',
-            'text':        request.body.decode('utf-8'),
+            'text':        self.request.body.decode('utf-8'),
         }
 
         if not newbill['description'] or not newbill['text']:
@@ -181,9 +188,9 @@ class Bill(object):
             response['error'] = 'Description and text are required'
             return response
 
-        self.context.save(newbill['committer'], newbill['time'], **newbill)
+        self.context.save(**newbill)
 
-        if self.request.GET.get('release'):
+        if booleanflag(self.request.GET, 'release'):
             db.Lock('release')
 
         return response
@@ -193,7 +200,7 @@ class Bill(object):
     def create(self):
         docmeta = self.request.POST['docmeta'].value
         doc = self.request.POST['doc'].value.decode('utf-8')
-        docid, status = context.create(docmeta, doc)
+        docid, status = self.context.create(docmeta, doc)
         if status == 'exists':
             return HTTPConflict(body="{} {}\n".format(docid, status))
         elif status == 'created':
@@ -243,7 +250,7 @@ class Bill(object):
     @view_config(name='edit', permission='revise', renderer="templates/bill_edit.pt", request_method="GET")
     def edit_form(self):
         response = self.edit_form_response()
-        if has_permission('complete', self.context, self.request):
+        if security.has_permission('complete', self.context, self.request):
             response['bill']['text'] = self.context.doc()
         return response
 
@@ -276,14 +283,14 @@ class Bill(object):
             return response
 
         action = self.request.POST.get('action')
-        nextlocation = location="/bills/{}/view".format(docid)
+        nextlocation = "/bills/{}/view".format(self.context.docid)
         if action == 'Save and Edit Next':
             newbillid = self.context.next()
             if newbillid:
                 nextlocation = '/Editor/Index.html?doc={}'.format(newbillid)
         elif action == 'Save and Return':
-            dashboard = db.Dashboard(self.request.basex, self.context.asmap()['bill']['type'])
-            nextlocation = self.request.resource_url(dashboard)
+            billlist = db.BillList(self.request.basex, self.context.asmap()['bill']['type'])
+            nextlocation = self.request.resource_url(billlist)
         return HTTPSeeOther(nextlocation)
 
 
@@ -298,7 +305,7 @@ class Locks(object):
         return self.context.asmap()
 
 
-@view_config(route_name="download")
+@view_config(route_name="download", request_method='GET')
 def download(request):
     from dateutil.parser import parse
     import time
