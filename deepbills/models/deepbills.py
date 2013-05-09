@@ -265,7 +265,7 @@ return (
             copy $r := $lastrev
             modify (
                 replace value of node $r/@id with $newrevid,
-                replace value of node $r/@committer with $committer,
+                replace value of node $r/@comitter with $committer,
                 replace value of node $r/@commit-time with $commit-time,
                 replace value of node $r/@status with $newstatus,
                 if ($description)
