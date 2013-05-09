@@ -189,7 +189,7 @@ class Bill(object):
 
         newbill = {
             'time':        now_isoformat(),
-            'comitter' :   self.userid,
+            'committer' :   self.userid,
             'description': 'Edited via AKN',
             'text':        self.request.body.decode('utf-8'),
         }
@@ -289,7 +289,7 @@ class Bill(object):
         response = self.edit_form_response()
         newbill = {
             'commit-time': now_isoformat(),
-            'comitter':    security.authenticated_userid(self.request),
+            'committer':    security.authenticated_userid(self.request),
             'description': self.request.POST.get('description', '').strip(),
             'text':        self.request.POST.get('text', '').strip(),
             'status':      self.request.POST.get('status', '').strip(),
