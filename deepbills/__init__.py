@@ -53,6 +53,7 @@ def main(global_config, **settings):
     config.add_route('bill_types', '/')
     config.add_route('query', '/query')
     config.add_route('download', '/download')
+    config.add_route('logout', '/logout')
 
 
     config.add_static_view('Editor', 'static/AKN/Editor')

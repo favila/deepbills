@@ -58,6 +58,11 @@ def auth_basic_challenge(request):
     response.headers.update(security.forget(request))
     return response
 
+@view_config(route_name='logout')
+def logout(request):
+    response = HTTPSeeOther(location='/')
+    response.headers.update(security.forget(request))
+    return response
 
 @view_defaults(context=db.Vocabulary, http_cache=3600)
 class Lookup(object):
