@@ -239,9 +239,10 @@ class Bill(BaseXResource):
         """
         # TODO: add sanity checking on save
         # See https://dancingmammoth.basecamphq.com/projects/9856486-government-transparency-project/todo_items/152232380/comments
+        # TODO: don't save text if unchanged
         query = """\
-declare option db:chop 'false';
 declare namespace cato = "http://namespaces.cato.org/catoxml";
+declare option db:chop "false";
 let $metapath  := concat('docmetas/', $docid, '.xml'),
     $docmeta   := db:open('deepbills', $metapath)/docmeta,
     $lastrevid := xs:positiveInteger(fn:max($docmeta/revisions/revision/@id)),
