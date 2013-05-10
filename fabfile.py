@@ -10,23 +10,23 @@ env.editordir = '../AKN/Editor'
 env.vocabfiles = ['acts.xml', 'billversions.xml', 'committees.xml', 'federal-bodies.xml', 'people.xml']
 env.basexclientcmd = 'basexclient -Uadmin -Padmin'
 
-def deploy():
+def deploy(tag='master'):
     "Deploy everything; same as 'deploy_virtualenv deploy_deepbills deploy_editor deploy_reload'"
-    deploy_deepbills()
+    deploy_deepbills(tag)
     deploy_editor()
     deploy_reload()
 
 
-def push_deepbills():
-    "Push local master to origin, in preparation for a 'git pull' on production"
-    local('git push origin master')
+def push_deepbills(tag='master'):
+    "Push local master (or supplied tag) to origin, in preparation for a 'git pull' on production"
+    local('git push origin {}'.format(tag))
 
 
-def deploy_deepbills():
+def deploy_deepbills(tag='master'):
     """Update code and virtualenv on production"""
     run('if [ ! -d deepbills ]; then git clone %(gitrepo)s; fi' % env)
     with cd('deepbills'):
-        run('git pull origin master')
+        run('git pull origin {}'.format(tag))
     run("if [ ! -d env ]; then virtualenv env --prompt='(deepbills)'; fi")
     run("if [ ! -d virtualenv-install-cache ]; then mkdir virtualenv-install-cache; fi")
     with cd('deepbills'):
