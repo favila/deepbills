@@ -8,7 +8,7 @@ SET UPDINDEX false
 SET CHOP true
 CREATE DATABASE schemas /home/favila/db/schemas/
 
-SET FTINDEX false
+SET FTINDEX true
 SET TEXTINDEX true
 SET ATTRINDEX true 
 SET UPDINDEX true
