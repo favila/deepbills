@@ -1,5 +1,3 @@
-SET AUTOFLUSH false
-
 SET CHOP false
 XQUERY let $base := '/home/favila/db/' for $d in db:open('deepbills','docs')          let $file := $base || (document-uri($d) ! substring-after(.,'/')) let $dir := file:dir-name($file) return ( if (not(file:exists($dir))) then file:create-dir($dir) else (), file:write($file, $d/*, map{"method":="xml"}))
 
@@ -9,4 +7,3 @@ XQUERY let $base := '/home/favila/db/' for $d in db:open('deepbills','docmetas/'
 XQUERY let $base := '/home/favila/db/' for $d in db:open('deepbills','vocabularies/') let $file := $base || (document-uri($d) ! substring-after(.,'/')) let $dir := file:dir-name($file) return ( if (not(file:exists($dir))) then file:create-dir($dir) else (), file:write($file, $d/*, map{"method":="xml"}))
 
 XQUERY let $base := '/home/favila/db/' for $d in db:open('deepbills','schemas/')      let $file := $base || (document-uri($d) ! substring-after(.,'/')) let $dir := file:dir-name($file) return ( if (not(file:exists($dir))) then file:create-dir($dir) else (), file:write($file, $d/*, map{"method":="xml"}))
-FLUSH

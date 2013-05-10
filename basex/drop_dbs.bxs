@@ -1,9 +1,5 @@
-SET AUTOFLUSH false
-
 DROP DB schemas
 DROP DB vocabularies
 DROP DB users
 DROP DB docmetas
 DROP DB docs
-
-FLUSH

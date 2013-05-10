@@ -1,6 +1,3 @@
-
-SET AUTOFLUSH false
-
 SET FTINDEX false
 SET TEXTINDEX false
 SET ATTRINDEX false 
@@ -30,5 +27,3 @@ SET CHOP true
 CREATE DATABASE docmetas /home/favila/db/docmetas/
 
 CREATE DATABASE users /home/favila/db/users/
-
-FLUSH

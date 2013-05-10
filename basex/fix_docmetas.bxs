@@ -1,5 +1,3 @@
-SET AUTOFLUSH false
-
 XQUERY for $d in db:open('docmetas')/docmeta/revisions/revision/@doc return replace value of node $d with replace($d, '^/?docs/', '')
 
 XQUERY for $c in db:open('docmetas')/docmeta/revisions/revision/@comitter return (rename node $c as 'committer', replace value of node $c with replace($c, '^/?[^/]+/|\.xml$', ''))
@@ -7,5 +5,3 @@ XQUERY for $c in db:open('docmetas')/docmeta/revisions/revision/@comitter return
 XQUERY declare namespace cato = "http://namespaces.cato.org/catoxml"; for $rev in db:open('docmetas')/docmeta/revisions/revision[@id=max(../revision/@id)] return insert node attribute annotations {count(db:open('docs',$rev/@doc)/descendant::cato:entity[@entity-type eq "annotation"])} into $rev
 
 XQUERY for $rev in db:open('docmetas')/docmeta/revisions/revision[@id=max(../revision/@id)] return insert node attribute size {sum(db:open('docs',$rev/@doc)/descendant::text() ! string-length(.))} into $rev
-
-FLUSH
