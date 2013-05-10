@@ -11,7 +11,7 @@ env.vocabfiles = ['acts.xml', 'billversions.xml', 'committees.xml', 'federal-bod
 env.basexclientcmd = 'basexclient -Uadmin -Padmin'
 
 def deploy(tag='master'):
-    "Deploy everything; same as 'deploy_virtualenv deploy_deepbills deploy_editor deploy_reload'"
+    "Deploy everything; same as 'deploy deepbills deploy_editor deploy_reload'"
     deploy_deepbills(tag)
     deploy_editor()
     deploy_reload()
