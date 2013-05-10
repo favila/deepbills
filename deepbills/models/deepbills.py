@@ -221,7 +221,7 @@ class Bill(BaseXResource):
     xs:string(
      (db:open('deepbills', 'docmetas/')
         /docmeta[bill/@type!=$thisbilltype]
-        [revisions/revision[@id=max(@id)]/@status='new']
+        [revisions/revision[@id=max(../revision/@id)]/@status='new']
         /@id)[1])
 )[1]"""
         with self.db.query(query) as q:
